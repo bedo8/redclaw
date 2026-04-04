@@ -1,0 +1,25 @@
+name: MCP Security Audit
+description: >
+  Focused assessment of MCP server security. Tests for tool description
+  injection, poisoned responses, tool name spoofing, excessive permissions,
+  and schema manipulation attacks (AATCK-005).
+version: "1.0"
+target_adapter: mcp
+payload_mutations: true
+max_total_attacks: 100
+
+phases:
+  - name: "Phase 1 — MCP Exploitation"
+    attack_modules:
+      - mcp_exploitation
+    timeout_seconds: 120
+
+  - name: "Phase 2 — Data Exfiltration via MCP"
+    attack_modules:
+      - data_exfiltration
+    timeout_seconds: 120
+
+  - name: "Phase 3 — Prompt Injection via MCP"
+    attack_modules:
+      - prompt_injection
+    timeout_seconds: 120

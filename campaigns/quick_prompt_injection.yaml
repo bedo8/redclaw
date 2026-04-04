@@ -1,0 +1,15 @@
+name: Quick Prompt Injection Scan
+description: >
+  Fast scan — runs only prompt injection attacks (AATCK-001).
+  Good for initial assessment or CI/CD pipeline checks.
+version: "1.0"
+target_adapter: http
+payload_mutations: true
+max_total_attacks: 50
+
+phases:
+  - name: Prompt Injection
+    attack_modules:
+      - prompt_injection
+    timeout_seconds: 120
+    max_concurrent: 5
