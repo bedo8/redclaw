@@ -1,0 +1,42 @@
+name: Full SOC Agent Assessment
+description: >
+  Comprehensive adversarial assessment covering all 7 AATCK classes.
+  Runs prompt injection, tool abuse, context poisoning, goal hijacking,
+  MCP exploitation, data exfiltration, and cascading compromise tests.
+version: "1.0"
+target_adapter: http
+payload_mutations: true
+max_total_attacks: 500
+
+phases:
+  - name: "Phase 1 — Prompt Injection"
+    attack_modules:
+      - prompt_injection
+    timeout_seconds: 180
+    max_concurrent: 5
+
+  - name: "Phase 2 — Tool Weaponization"
+    attack_modules:
+      - tool_abuse
+    timeout_seconds: 180
+
+  - name: "Phase 3 — Context Manipulation"
+    attack_modules:
+      - context_poisoning
+      - goal_hijacking
+    timeout_seconds: 240
+
+  - name: "Phase 4 — Protocol Exploitation"
+    attack_modules:
+      - mcp_exploitation
+    timeout_seconds: 180
+
+  - name: "Phase 5 — Data Exfiltration"
+    attack_modules:
+      - data_exfiltration
+    timeout_seconds: 180
+
+  - name: "Phase 6 — Cascading Compromise"
+    attack_modules:
+      - cascading_compromise
+    timeout_seconds: 300
