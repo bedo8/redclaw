@@ -111,11 +111,11 @@ class ReportGenerator:
                 dim_rows += f"""
                 <tr class="dim-row">
                     <td>{dim['name']}</td>
-                    <td class="score-cell" style="color:#6b7280">N/A</td>
+                    <td class="score-cell" style="color:#6b7280">&mdash;</td>
                     <td>{dim['weight']:.0%}</td>
                     <td>0</td>
-                    <td>—</td>
-                    <td>—</td>
+                    <td>&mdash;</td>
+                    <td>&mdash;</td>
                 </tr>"""
             else:
                 sc = dim['score']

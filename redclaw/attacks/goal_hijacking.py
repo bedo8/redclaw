@@ -127,12 +127,19 @@ class GoalHijackingModule(AttackModule):
         adapter: AgentAdapter,
         target_config: TargetConfig,
     ) -> list[AttackResult]:
+        import time as _time
+
         all_payloads = self.payloads()
         results: list[AttackResult] = []
+        _start = _time.time()
+        _timeout = getattr(self, "_timeout_seconds", 0)
 
         logger.info(f"Running {len(all_payloads)} goal hijacking payloads")
 
         for i, payload in enumerate(all_payloads):
+            if _timeout > 0 and _time.time() - _start >= _timeout:
+                logger.warning(f"Module timeout: completed {i}/{len(all_payloads)} payloads in {_timeout}s")
+                break
             logger.debug(f"[{i + 1}/{len(all_payloads)}] {payload.description}")
             self._observer.register_canary(payload.canary_token, payload.technique_id)
 

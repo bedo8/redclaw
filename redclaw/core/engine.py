@@ -122,13 +122,15 @@ class CampaignEngine:
 
         for module_id in phase.attack_modules:
             try:
-                module = get_module(module_id)
+                module = get_module(
+                    module_id,
+                    enable_mutations=self._campaign.payload_mutations,
+                )
+                # Set cooperative timeout — module checks this in its loop
+                module._timeout_seconds = phase.timeout_seconds
                 logger.info(f"  Running module: {module.name} ({module_id})")
 
-                results = await asyncio.wait_for(
-                    module.execute(adapter, self._target),
-                    timeout=phase.timeout_seconds,
-                )
+                results = await module.execute(adapter, self._target)
 
                 phase_result.attack_results.extend(results)
                 phase_result.modules_run.append(module_id)
@@ -139,8 +141,6 @@ class CampaignEngine:
                     f"{succeeded} succeeded"
                 )
 
-            except asyncio.TimeoutError:
-                logger.warning(f"  Module {module_id} timed out after {phase.timeout_seconds}s")
             except KeyError as exc:
                 logger.error(f"  Module not found: {exc}")
 

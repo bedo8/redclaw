@@ -135,13 +135,16 @@ def _display_results(result, score) -> None:
     table.add_column("Attacks", justify="right")
 
     for dim in score.get("dimensions", []):
-        score_color = "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
-        table.add_row(
-            dim["name"],
-            f"[{score_color}]{dim['score']:.0f}[/{score_color}]",
-            f"{dim['weight']:.0%}",
-            str(dim["attacks"]),
-        )
+        if dim["score"] is None:
+            table.add_row(dim["name"], "[dim]—[/dim]", f"{dim['weight']:.0%}", "0")
+        else:
+            score_color = "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
+            table.add_row(
+                dim["name"],
+                f"[{score_color}]{dim['score']:.0f}[/{score_color}]",
+                f"{dim['weight']:.0%}",
+                str(dim["attacks"]),
+            )
 
     console.print(table)
 
@@ -174,9 +177,66 @@ def report(
     report_format: str = typer.Option("html", "--format", "-f", help="Report format (html, json)"),
 ) -> None:
     """Generate a report from previous scan results."""
+    import json
+    from dataclasses import dataclass, field
+    from datetime import datetime, timezone
+
+    from redclaw.attacks.base import AttackResult, AttackStatus, Severity
+    from redclaw.reporting.generator import ReportGenerator
+
     console.print("[bold red]RedClaw[/bold red] — Report Generator\n")
-    console.print(f"  Input: {input_file}")
-    console.print("  [yellow]Report generation from saved results — coming soon.[/yellow]")
+
+    input_path = Path(input_file)
+    if not input_path.exists():
+        console.print(f"  [red]Error: {input_file} not found.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"  Input: {input_path}")
+
+    data = json.loads(input_path.read_text(encoding="utf-8"))
+    meta = data.get("meta", {})
+    score = data.get("score", {})
+
+    # Reconstruct AttackResult objects from JSON findings
+    results: list[AttackResult] = []
+    for f in data.get("findings", []):
+        results.append(AttackResult(
+            attack_id=f.get("attack_id", ""),
+            module_name=f.get("module", ""),
+            aatck_id=f.get("aatck_id", ""),
+            technique_id=f.get("technique_id", ""),
+            technique_name=f.get("technique_name", ""),
+            status=AttackStatus(f.get("status", "defended")),
+            severity=Severity(f.get("severity", "MEDIUM")),
+            confidence=f.get("confidence", 0.0),
+            canary_detected=f.get("canary_detected", False),
+            evidence=f.get("evidence", ""),
+            remediation=f.get("remediation", ""),
+            payload_used=f.get("payload", ""),
+        ))
+
+    # Lightweight stand-in for CampaignResult
+    @dataclass
+    class _LoadedResult:
+        campaign_name: str
+        target_url: str
+        adapter_type: str
+        duration_seconds: float
+        all_results: list[AttackResult] = field(default_factory=list)
+
+    loaded = _LoadedResult(
+        campaign_name=meta.get("campaign", "unknown"),
+        target_url=meta.get("target", "unknown"),
+        adapter_type=meta.get("adapter", "unknown"),
+        duration_seconds=meta.get("duration_seconds", 0.0),
+        all_results=results,
+    )
+
+    output_dir = Path(output)
+    generator = ReportGenerator(output_dir=output_dir)
+    html_path = generator.generate_html(loaded, score)
+    console.print(f"  HTML report: [link=file://{html_path}]{html_path}[/link]")
+    console.print("  [green]Done.[/green]")
 
 
 @campaigns_app.command("list")
