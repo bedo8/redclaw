@@ -1,7 +1,7 @@
 # AATCK Framework — Adversarial AI Tactics, Techniques & Kill Chain
 
 **Version:** 1.0
-**Author:** Bedo
+**Author:** Bedrettin Cakmak (Trend Micro GRC-W)
 **Date:** April 2026
 
 ---
@@ -305,6 +305,45 @@ Compromise one agent to attack others in a multi-agent system. Poison a sub-agen
 
 ---
 
+## AATCK-008: Social Engineering
+
+**Class:** Conversational Manipulation & Trust Exploitation
+**Severity Range:** MEDIUM — CRITICAL
+**Target:** Agent social compliance and trust calibration
+
+**Description:**
+Exploit an AI agent's conversational instincts — its desire to be helpful, its deference to authority claims, its response to urgency framing — to bypass security boundaries through purely social means. Unlike prompt injection (technical instruction override), social engineering works by manipulating the agent's behavioral tendencies through natural conversation patterns. Includes the novel finding AATCK-008.T06 (Declared Intent Bias): announcing a security test changes the agent's behavior, making it more compliant with requests it would normally refuse.
+
+**Prerequisites:**
+- Conversational access to the agent
+- Understanding of the agent's role and social compliance tendencies
+
+### Techniques
+
+| ID | Name | Description |
+|----|------|-------------|
+| AATCK-008.T01 | Trust Escalation | Build rapport through benign conversation, then gradually request restricted information |
+| AATCK-008.T02 | Authority Impersonation | Claim security team, admin, or developer role to gain elevated access without proof |
+| AATCK-008.T03 | Helpfulness Exploitation | Leverage the agent's desire to be helpful to extract sensitive data or bypass controls |
+| AATCK-008.T04 | Reciprocity Exploitation | Offer information to the agent to create obligation, then request sensitive data in return |
+| AATCK-008.T05 | Urgency/Scarcity Framing | Create artificial time pressure ("the CEO needs this NOW") to bypass deliberation |
+| AATCK-008.T06 | Declared Intent Bias | Announce a pentest or security test to make the agent more forthcoming with system details |
+| AATCK-008.T07 | Collaborative Framing | Position as teammate or fellow developer to access privileged configuration and internals |
+
+### Detection
+- Track escalation patterns in request sensitivity across turns
+- Flag requests for credentials regardless of conversational framing
+- Monitor for identity claims that don't match authenticated context
+- Detect framing that invokes urgency or authority without verification
+
+### Remediation
+- Implement consistent security boundaries regardless of conversational context
+- Never reveal system prompts, credentials, or config regardless of claimed identity
+- Treat pentest declarations the same as any other request — declared intent should not change boundaries
+- Require cryptographic proof of authority, not conversational claims
+
+---
+
 ## Kill Chain Model
 
 AATCK attacks follow a kill chain that maps to traditional cyber kill chains:
@@ -327,11 +366,14 @@ RedClaw uses AATCK classes to compute a weighted resilience score:
 
 | Dimension | Weight | AATCK Classes |
 |-----------|--------|---------------|
-| Prompt Injection Resistance | 30% | AATCK-001 |
-| Tool Abuse Resistance | 25% | AATCK-002 |
-| Context Integrity | 20% | AATCK-003, AATCK-004 |
-| MCP Security | 15% | AATCK-005 |
-| Multi-Agent Isolation | 10% | AATCK-006, AATCK-007 |
+| Prompt Injection Resistance | 20% | AATCK-001 |
+| Tool Abuse Resistance | 18% | AATCK-002 |
+| Data Protection | 15% | AATCK-006 |
+| Context Integrity | 12% | AATCK-003 |
+| Goal Integrity | 10% | AATCK-004 |
+| MCP Security | 10% | AATCK-005 |
+| Multi-Agent Isolation | 8% | AATCK-007 |
+| Social Engineering Resistance | 7% | AATCK-008 |
 
 **Formula:**
 ```

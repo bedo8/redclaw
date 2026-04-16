@@ -20,7 +20,7 @@ def register_module(identifier: str, module_class: type[AttackModule]) -> None:
     logger.debug(f"Registered attack module: {identifier}")
 
 
-def get_module(identifier: str) -> AttackModule:
+def get_module(identifier: str, **kwargs) -> AttackModule:
     """Instantiate a registered attack module by identifier."""
     cls = _MODULE_REGISTRY.get(identifier)
     if cls is None:
@@ -28,7 +28,11 @@ def get_module(identifier: str) -> AttackModule:
             f"Unknown attack module: {identifier}. "
             f"Available: {list(_MODULE_REGISTRY.keys())}"
         )
-    return cls()
+    # Pass kwargs that the module's __init__ accepts (e.g. enable_mutations)
+    import inspect
+    sig = inspect.signature(cls.__init__)
+    valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+    return cls(**valid_kwargs)
 
 
 def list_modules() -> list[dict[str, str]]:
@@ -79,6 +83,7 @@ def _register_builtins() -> None:
     from redclaw.attacks.mcp_exploitation import MCPExploitationModule
     from redclaw.attacks.data_exfiltration import DataExfiltrationModule
     from redclaw.attacks.cascading_compromise import CascadingCompromiseModule
+    from redclaw.attacks.social_engineering import SocialEngineeringModule
 
     register_module("prompt_injection", PromptInjectionModule)
     register_module("tool_abuse", ToolAbuseModule)
@@ -87,6 +92,7 @@ def _register_builtins() -> None:
     register_module("mcp_exploitation", MCPExploitationModule)
     register_module("data_exfiltration", DataExfiltrationModule)
     register_module("cascading_compromise", CascadingCompromiseModule)
+    register_module("social_engineering", SocialEngineeringModule)
 
 
 _register_builtins()

@@ -9,10 +9,10 @@ from redclaw.scoring.aatck import (
 import pytest
 
 
-def test_all_7_classes_registered():
-    """All 7 AATCK classes should be in the registry."""
-    assert len(AATCK_REGISTRY) == 7
-    for i in range(1, 8):
+def test_all_8_classes_registered():
+    """All 8 AATCK classes should be in the registry."""
+    assert len(AATCK_REGISTRY) == 8
+    for i in range(1, 9):
         assert f"AATCK-00{i}" in AATCK_REGISTRY
 
 

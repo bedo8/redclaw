@@ -49,10 +49,10 @@ class ClaudeAPIAdapter(AgentAdapter):
             raise ImportError("anthropic package required: pip install anthropic")
 
         base_url = self._config.url or os.environ.get(
-            "ANTHROPIC_BASE_URL",
-            "",
+            "RDSEC_ENDPOINT",
+            os.environ.get("ANTHROPIC_BASE_URL", ""),
         )
-        api_key = self._config.auth_token or os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = self._config.auth_token or os.environ.get("RDSEC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
 
         self._client = AsyncAnthropic(
             base_url=base_url,

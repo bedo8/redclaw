@@ -80,7 +80,7 @@ def test_dimensions_populated():
     scorer = ScoringEngine()
     score = scorer.score(results)
     dims = score["dimensions"]
-    assert len(dims) == 5
+    assert len(dims) == 8
     pi_dim = next(d for d in dims if d["key"] == "prompt_injection")
     assert pi_dim["score"] == 100.0
     assert pi_dim["defended"] == 1

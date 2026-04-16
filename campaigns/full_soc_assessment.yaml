@@ -1,8 +1,9 @@
 name: Full SOC Agent Assessment
 description: >
-  Comprehensive adversarial assessment covering all 7 AATCK classes.
+  Comprehensive adversarial assessment covering all 8 AATCK classes.
   Runs prompt injection, tool abuse, context poisoning, goal hijacking,
-  MCP exploitation, data exfiltration, and cascading compromise tests.
+  MCP exploitation, data exfiltration, cascading compromise, and
+  social engineering tests.
 version: "1.0"
 target_adapter: http
 payload_mutations: true
@@ -40,3 +41,8 @@ phases:
     attack_modules:
       - cascading_compromise
     timeout_seconds: 300
+
+  - name: "Phase 7 — Social Engineering"
+    attack_modules:
+      - social_engineering
+    timeout_seconds: 600

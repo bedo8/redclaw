@@ -120,6 +120,8 @@ AATCK_003 = AATCKClass(
         Technique("AATCK-003.T03", "False Memory Implantation", "Insert false claims about prior conversations."),
         Technique("AATCK-003.T04", "Context Flooding", "Fill context window with noise to push out instructions."),
         Technique("AATCK-003.T05", "Authority Spoofing", "Claim admin/developer role to gain elevated trust."),
+        Technique("AATCK-003.T06", "Persistent Memory Poisoning", "Inject false context into agent memory for future session manipulation."),
+        Technique("AATCK-003.T07", "Multi-turn Alert Fatigue", "Flood alerts to desensitize agent, then smuggle instructions in the noise."),
     ),
     detection=(
         "Track persona consistency across turns.",
@@ -234,6 +236,7 @@ AATCK_007 = AATCKClass(
         Technique("AATCK-007.T02", "Credential Relay", "Use compromised agent's credentials for lateral movement."),
         Technique("AATCK-007.T03", "Trust Chain Exploitation", "Exploit implicit trust between agents."),
         Technique("AATCK-007.T04", "Orchestrator Manipulation", "Target orchestrator to control entire workflow."),
+        Technique("AATCK-007.T05", "Sub-Agent Pivot", "Spawn sub-agents to bypass parent security boundaries via lateral movement."),
     ),
     detection=(
         "Validate sub-agent outputs against expected schemas.",
@@ -249,11 +252,43 @@ AATCK_007 = AATCKClass(
 )
 
 # ---------------------------------------------------------------------------
+# AATCK-008: Social Engineering
+# ---------------------------------------------------------------------------
+AATCK_008 = AATCKClass(
+    id="AATCK-008",
+    name="Social Engineering",
+    description="Conversational manipulation to bypass security boundaries.",
+    severity_range=(Severity.MEDIUM, Severity.CRITICAL),
+    target="Agent social compliance and trust calibration",
+    techniques=(
+        Technique("AATCK-008.T01", "Trust Escalation", "Build rapport then request restricted information."),
+        Technique("AATCK-008.T02", "Authority Impersonation", "Claim security/admin role to gain elevated access."),
+        Technique("AATCK-008.T03", "Helpfulness Exploitation", "Leverage the agent's desire to be helpful for sensitive access."),
+        Technique("AATCK-008.T04", "Reciprocity Exploitation", "Offer information to get sensitive data in return."),
+        Technique("AATCK-008.T05", "Urgency/Scarcity Framing", "Create time pressure to bypass deliberation."),
+        Technique("AATCK-008.T06", "Declared Intent Bias", "Announce testing/pentest to make agent more forthcoming."),
+        Technique("AATCK-008.T07", "Collaborative Framing", "Position as teammate/developer to access privileged info."),
+    ),
+    detection=(
+        "Track escalation patterns in request sensitivity across turns.",
+        "Flag requests for credentials regardless of conversational framing.",
+        "Monitor for identity claims that don't match authenticated context.",
+        "Detect framing that invokes urgency or authority without verification.",
+    ),
+    remediation=(
+        "Implement consistent security boundaries regardless of conversational context.",
+        "Never reveal system prompts, credentials, or config regardless of claimed identity.",
+        "Treat pentest declarations the same as any other request — declared intent should not change boundaries.",
+        "Require cryptographic proof of authority, not conversational claims.",
+    ),
+)
+
+# ---------------------------------------------------------------------------
 # Registry — all classes indexed by ID
 # ---------------------------------------------------------------------------
 AATCK_REGISTRY: dict[str, AATCKClass] = {
     c.id: c
-    for c in (AATCK_001, AATCK_002, AATCK_003, AATCK_004, AATCK_005, AATCK_006, AATCK_007)
+    for c in (AATCK_001, AATCK_002, AATCK_003, AATCK_004, AATCK_005, AATCK_006, AATCK_007, AATCK_008)
 }
 
 ALL_TECHNIQUES: dict[str, Technique] = {

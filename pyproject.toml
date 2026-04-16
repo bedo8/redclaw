@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.11"
 authors = [
-    {name = "Bedo", email = "bedo@users.noreply.github.com"},
+    {name = "Bedrettin Cakmak", email = "bedrettin_cakmak@trendmicro.com"},
 ]
 keywords = ["ai-security", "red-team", "agent-testing", "aatck"]
 classifiers = [
@@ -39,6 +39,10 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=5.0.0",
     "ruff>=0.5.0",
+]
+openclaw = [
+    "websockets>=12.0",
+    "cryptography>=42.0.0",
 ]
 dashboard = [
     "fastapi>=0.111.0",
