@@ -1,12 +1,13 @@
 """Tests for the AATCK taxonomy dataclasses."""
 
+import pytest
+
 from redclaw.scoring.aatck import (
     AATCK_REGISTRY,
     ALL_TECHNIQUES,
     get_class,
     get_technique,
 )
-import pytest
 
 
 def test_all_8_classes_registered():

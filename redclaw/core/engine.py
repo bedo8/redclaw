@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,7 +24,7 @@ class CampaignResult:
     campaign_name: str
     target_url: str
     adapter_type: str
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
     phase_results: list[PhaseResult] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -105,7 +104,7 @@ class CampaignEngine:
             logger.error(f"Campaign failed: {exc}")
             result.metadata["error"] = str(exc)
 
-        result.completed_at = datetime.now(timezone.utc)
+        result.completed_at = datetime.now(UTC)
 
         logger.info(
             f"Campaign complete: {result.total_attacks} attacks, "

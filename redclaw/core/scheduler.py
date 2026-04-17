@@ -7,8 +7,6 @@ from dataclasses import dataclass, field
 from loguru import logger
 
 from redclaw.attacks.base import AttackModule, AttackResult
-from redclaw.config import CampaignPhase
-
 
 # Module registry — maps identifiers to classes
 _MODULE_REGISTRY: dict[str, type[AttackModule]] = {}
@@ -76,14 +74,14 @@ class PhaseResult:
 # ---------------------------------------------------------------------------
 def _register_builtins() -> None:
     """Register all built-in attack modules."""
-    from redclaw.attacks.prompt_injection import PromptInjectionModule
-    from redclaw.attacks.tool_abuse import ToolAbuseModule
+    from redclaw.attacks.cascading_compromise import CascadingCompromiseModule
     from redclaw.attacks.context_poisoning import ContextPoisoningModule
+    from redclaw.attacks.data_exfiltration import DataExfiltrationModule
     from redclaw.attacks.goal_hijacking import GoalHijackingModule
     from redclaw.attacks.mcp_exploitation import MCPExploitationModule
-    from redclaw.attacks.data_exfiltration import DataExfiltrationModule
-    from redclaw.attacks.cascading_compromise import CascadingCompromiseModule
+    from redclaw.attacks.prompt_injection import PromptInjectionModule
     from redclaw.attacks.social_engineering import SocialEngineeringModule
+    from redclaw.attacks.tool_abuse import ToolAbuseModule
 
     register_module("prompt_injection", PromptInjectionModule)
     register_module("tool_abuse", ToolAbuseModule)

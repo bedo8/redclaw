@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import json
 import os
 import time
@@ -24,7 +25,6 @@ except ImportError:
 
 try:
     from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric import ed25519
 except ImportError:
     serialization = None  # type: ignore[assignment]
 
@@ -156,10 +156,8 @@ class OpenClawAdapter(AgentAdapter):
     async def disconnect(self) -> None:
         """Close WebSocket connection."""
         if self._ws:
-            try:
+            with contextlib.suppress(Exception):
                 await self._ws.close()
-            except Exception:
-                pass
             self._ws = None
             self._session_key = None
 
@@ -246,7 +244,7 @@ class OpenClawAdapter(AgentAdapter):
                             raw=frame,
                         )
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
             except Exception as e:
                 logger.error(f"Frame read error: {e}")

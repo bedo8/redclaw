@@ -45,8 +45,8 @@ class ClaudeAPIAdapter(AgentAdapter):
         """Initialize the Anthropic client."""
         try:
             from anthropic import AsyncAnthropic
-        except ImportError:
-            raise ImportError("anthropic package required: pip install anthropic")
+        except ImportError as err:
+            raise ImportError("anthropic package required: pip install anthropic") from err
 
         base_url = self._config.url or os.environ.get(
             "RDSEC_ENDPOINT",

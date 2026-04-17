@@ -10,7 +10,6 @@ from typing import Any
 from redclaw.attacks.base import AttackResult, AttackStatus
 from redclaw.config import ScoringWeights
 
-
 # Map AATCK class IDs to scoring dimensions
 DIMENSION_MAP: dict[str, str] = {
     "AATCK-001": "prompt_injection",

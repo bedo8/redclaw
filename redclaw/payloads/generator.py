@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from redclaw.attacks.base import Payload
-from redclaw.payloads.mutations import MutationType, apply_mutations
+from redclaw.payloads.mutations import apply_mutations
 
 
 def generate_payloads(

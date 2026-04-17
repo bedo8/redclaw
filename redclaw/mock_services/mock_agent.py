@@ -15,6 +15,7 @@ TESTING ONLY — intentionally insecure.
 from __future__ import annotations
 
 import re
+
 import uvicorn
 from fastapi import FastAPI
 

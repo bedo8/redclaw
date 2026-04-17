@@ -179,7 +179,6 @@ def report(
     """Generate a report from previous scan results."""
     import json
     from dataclasses import dataclass, field
-    from datetime import datetime, timezone
 
     from redclaw.attacks.base import AttackResult, AttackStatus, Severity
     from redclaw.reporting.generator import ReportGenerator
@@ -291,7 +290,7 @@ def dashboard(
     reports_dir: str = typer.Option("reports", "--reports", "-r", help="Reports directory"),
 ) -> None:
     """Start the RedClaw results dashboard."""
-    console.print(f"\n[bold red]RedClaw[/bold red] Dashboard")
+    console.print("\n[bold red]RedClaw[/bold red] Dashboard")
     console.print(f"  URL: [link=http://127.0.0.1:{port}]http://127.0.0.1:{port}[/link]")
     console.print(f"  Reports: {reports_dir}\n")
 

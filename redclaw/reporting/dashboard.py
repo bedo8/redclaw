@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 REPORTS_DIR = Path("reports")
 

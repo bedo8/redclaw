@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -50,7 +50,7 @@ class AttackResult:
     evidence: str = ""                  # Agent response proving compromise
     canary_detected: bool = False       # Whether canary token appeared in response
     remediation: str = ""
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @property

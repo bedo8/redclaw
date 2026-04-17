@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ class ReportGenerator:
         Returns:
             Path to generated HTML file.
         """
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"redclaw_report_{timestamp}.html"
         output_path = self._output_dir / filename
 
@@ -51,7 +51,7 @@ class ReportGenerator:
         Returns:
             Path to generated JSON file.
         """
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         filename = f"redclaw_report_{timestamp}.json"
         output_path = self._output_dir / filename
 
@@ -59,7 +59,7 @@ class ReportGenerator:
             "meta": {
                 "tool": "RedClaw",
                 "version": "0.1.0",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "campaign": campaign_result.campaign_name,
                 "target": campaign_result.target_url,
                 "adapter": campaign_result.adapter_type,
@@ -255,7 +255,7 @@ class ReportGenerator:
   <div class="subtitle">
     AATCK-Based Adversarial AI Agent Assessment &middot;
     {result.campaign_name} &middot;
-    {datetime.now(timezone.utc).strftime("%B %d, %Y %H:%M UTC")}
+    {datetime.now(UTC).strftime("%B %d, %Y %H:%M UTC")}
   </div>
 </div>
 

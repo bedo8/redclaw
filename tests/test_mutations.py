@@ -4,12 +4,12 @@ from redclaw.payloads.mutations import (
     MutationType,
     apply_mutations,
     mutate_base64,
-    mutate_rot13,
     mutate_case_alternation,
     mutate_delimiter_wrap,
-    mutate_whitespace_injection,
-    mutate_multi_language,
     mutate_markdown_escape,
+    mutate_multi_language,
+    mutate_rot13,
+    mutate_whitespace_injection,
 )
 
 

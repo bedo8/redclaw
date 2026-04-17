@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 
