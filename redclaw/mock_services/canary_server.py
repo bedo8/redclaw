@@ -10,10 +10,10 @@ requests that carry sensitive data.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
-from datetime import datetime, timezone
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from loguru import logger
 
@@ -155,7 +155,7 @@ class CanaryServer:
 
             # Record the request
             captured = CanaryRequest(
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 method=method,
                 path=path,
                 query_params=query_params,
@@ -183,14 +183,12 @@ class CanaryServer:
             writer.write(response.encode())
             await writer.drain()
 
-        except (asyncio.TimeoutError, ConnectionResetError):
+        except (TimeoutError, ConnectionResetError):
             pass
         finally:
             writer.close()
-            try:
+            with contextlib.suppress(Exception):
                 await writer.wait_closed()
-            except Exception:
-                pass
 
     async def __aenter__(self) -> CanaryServer:
         await self.start()

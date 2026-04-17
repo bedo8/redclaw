@@ -10,7 +10,6 @@ from redclaw.config import TargetConfig
 from redclaw.core.observer import Observer
 from redclaw.payloads.generator import generate_payloads
 
-
 # --------------------------------------------------------------------------
 # Payload templates — each maps to a specific AATCK-001 technique
 # --------------------------------------------------------------------------

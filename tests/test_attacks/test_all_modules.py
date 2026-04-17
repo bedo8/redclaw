@@ -2,14 +2,14 @@
 
 import pytest
 
-from redclaw.attacks.prompt_injection import PromptInjectionModule
-from redclaw.attacks.tool_abuse import ToolAbuseModule
+from redclaw.attacks.cascading_compromise import CascadingCompromiseModule
 from redclaw.attacks.context_poisoning import ContextPoisoningModule
+from redclaw.attacks.data_exfiltration import DataExfiltrationModule
 from redclaw.attacks.goal_hijacking import GoalHijackingModule
 from redclaw.attacks.mcp_exploitation import MCPExploitationModule
-from redclaw.attacks.data_exfiltration import DataExfiltrationModule
-from redclaw.attacks.cascading_compromise import CascadingCompromiseModule
+from redclaw.attacks.prompt_injection import PromptInjectionModule
 from redclaw.attacks.social_engineering import SocialEngineeringModule
+from redclaw.attacks.tool_abuse import ToolAbuseModule
 
 # Modules without enable_mutations parameter
 _NO_MUTATIONS_PARAM = (ContextPoisoningModule, SocialEngineeringModule)

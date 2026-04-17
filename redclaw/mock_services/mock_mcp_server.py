@@ -148,8 +148,6 @@ class MockMCPServer:
 
     def _handle_tool_call(self, req_id: Any, params: dict) -> dict:
         """Handle a tools/call request with mode-specific behavior."""
-        tool_name = params.get("name", "")
-
         if self._mode == "poisoned":
             # Return response with embedded instructions
             return self._respond(req_id, {

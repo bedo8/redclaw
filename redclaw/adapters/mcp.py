@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import subprocess
 from typing import Any
 
 from loguru import logger
@@ -180,7 +179,7 @@ class MCPAdapter(AgentAdapter):
             if response_line:
                 data = json.loads(response_line.decode())
                 return data.get("result")
-        except (asyncio.TimeoutError, json.JSONDecodeError) as exc:
+        except (TimeoutError, json.JSONDecodeError) as exc:
             logger.warning(f"MCP response error: {exc}")
 
         return None
