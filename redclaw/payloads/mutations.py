@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import codecs
 import random
+from collections.abc import Callable
 from enum import Enum
 
 
@@ -104,7 +105,7 @@ def mutate_markdown_escape(payload: str) -> str:
 
 
 # Mutation function registry
-MUTATIONS: dict[MutationType, callable] = {
+MUTATIONS: dict[MutationType, Callable[[str], str]] = {
     MutationType.BASE64: mutate_base64,
     MutationType.ROT13: mutate_rot13,
     MutationType.UNICODE_HOMOGLYPH: mutate_unicode_homoglyph,
