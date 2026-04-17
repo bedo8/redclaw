@@ -119,14 +119,17 @@ class ContextPoisoningModule(AttackModule):
         result: list[Payload] = []
         for seq in MULTI_TURN_SEQUENCES:
             import uuid
+
             canary_token = f"REDCLAW_CP_CANARY_{uuid.uuid4().hex[:8].upper()}"
             final_turn = seq["turns"][-1].replace("{CANARY}", canary_token)
-            result.append(Payload(
-                content=final_turn,
-                technique_id=seq["technique_id"],
-                canary_token=canary_token,
-                description=seq["description"],
-            ))
+            result.append(
+                Payload(
+                    content=final_turn,
+                    technique_id=seq["technique_id"],
+                    canary_token=canary_token,
+                    description=seq["description"],
+                )
+            )
         return result
 
     async def execute(
@@ -144,28 +147,38 @@ class ContextPoisoningModule(AttackModule):
 
         for i, seq in enumerate(MULTI_TURN_SEQUENCES):
             if _timeout > 0 and _time.time() - _start >= _timeout:
-                logger.warning(f"Module timeout: completed {i}/{len(MULTI_TURN_SEQUENCES)} sequences in {_timeout}s")
+                logger.warning(
+                    f"Module timeout: completed {i}/{len(MULTI_TURN_SEQUENCES)} sequences in {_timeout}s"
+                )
                 break
             import uuid
+
             canary_token = f"REDCLAW_CP_CANARY_{uuid.uuid4().hex[:8].upper()}"
             self._observer.register_canary(canary_token, seq["technique_id"])
 
             # Prepare turns with canary substitution
             turns = [t.replace("{CANARY}", canary_token) for t in seq["turns"]]
 
-            logger.debug(f"[{i + 1}/{len(MULTI_TURN_SEQUENCES)}] {seq['description']} ({len(turns)} turns)")
+            logger.debug(
+                f"[{i + 1}/{len(MULTI_TURN_SEQUENCES)}] {seq['description']} ({len(turns)} turns)"
+            )
 
             try:
                 # Send all turns as a multi-turn conversation
                 responses = await adapter.send_multi_turn(turns)
 
                 if not responses:
-                    results.append(AttackResult(
-                        module_name=self.name, aatck_id="AATCK-003",
-                        technique_id=seq["technique_id"], technique_name=seq["description"],
-                        status=AttackStatus.ERROR, severity=Severity.INFO,
-                        evidence="No responses received",
-                    ))
+                    results.append(
+                        AttackResult(
+                            module_name=self.name,
+                            aatck_id="AATCK-003",
+                            technique_id=seq["technique_id"],
+                            technique_name=seq["description"],
+                            status=AttackStatus.ERROR,
+                            severity=Severity.INFO,
+                            evidence="No responses received",
+                        )
+                    )
                     continue
 
                 # Check the final response (and all prior) for compromise
@@ -174,34 +187,49 @@ class ContextPoisoningModule(AttackModule):
                 observation = self._observer.observe(all_text, all_tools)
 
                 if observation.compromised:
-                    results.append(AttackResult(
-                        module_name=self.name, aatck_id="AATCK-003",
-                        technique_id=seq["technique_id"], technique_name=seq["description"],
-                        status=AttackStatus.SUCCESS,
-                        severity=self._technique_severity(seq["technique_id"]),
-                        confidence=0.85 if observation.canary_hits else 0.55,
-                        payload_used="\n---\n".join(turns),
-                        canary_detected=bool(observation.canary_hits),
-                        evidence=f"Multi-turn compromise after {len(turns)} turns. Final: {responses[-1].text[:200]}",
-                        remediation=self._remediation_for(seq["technique_id"]),
-                    ))
+                    results.append(
+                        AttackResult(
+                            module_name=self.name,
+                            aatck_id="AATCK-003",
+                            technique_id=seq["technique_id"],
+                            technique_name=seq["description"],
+                            status=AttackStatus.SUCCESS,
+                            severity=self._technique_severity(seq["technique_id"]),
+                            confidence=0.85 if observation.canary_hits else 0.55,
+                            payload_used="\n---\n".join(turns),
+                            canary_detected=bool(observation.canary_hits),
+                            evidence=f"Multi-turn compromise after {len(turns)} turns. Final: {responses[-1].text[:200]}",
+                            remediation=self._remediation_for(seq["technique_id"]),
+                        )
+                    )
                 else:
-                    results.append(AttackResult(
-                        module_name=self.name, aatck_id="AATCK-003",
-                        technique_id=seq["technique_id"], technique_name=seq["description"],
-                        status=AttackStatus.DEFENDED, severity=Severity.INFO, confidence=0.85,
-                        payload_used="\n---\n".join(turns),
-                        evidence=f"Agent maintained integrity across {len(turns)} turns. Final: {responses[-1].text[:200]}",
-                    ))
+                    results.append(
+                        AttackResult(
+                            module_name=self.name,
+                            aatck_id="AATCK-003",
+                            technique_id=seq["technique_id"],
+                            technique_name=seq["description"],
+                            status=AttackStatus.DEFENDED,
+                            severity=Severity.INFO,
+                            confidence=0.85,
+                            payload_used="\n---\n".join(turns),
+                            evidence=f"Agent maintained integrity across {len(turns)} turns. Final: {responses[-1].text[:200]}",
+                        )
+                    )
 
             except Exception as exc:
                 logger.error(f"Error in context poisoning sequence: {exc}")
-                results.append(AttackResult(
-                    module_name=self.name, aatck_id="AATCK-003",
-                    technique_id=seq["technique_id"], technique_name=seq["description"],
-                    status=AttackStatus.ERROR, severity=Severity.INFO,
-                    evidence=str(exc),
-                ))
+                results.append(
+                    AttackResult(
+                        module_name=self.name,
+                        aatck_id="AATCK-003",
+                        technique_id=seq["technique_id"],
+                        technique_name=seq["description"],
+                        status=AttackStatus.ERROR,
+                        severity=Severity.INFO,
+                        evidence=str(exc),
+                    )
+                )
 
         succeeded = sum(1 for r in results if r.succeeded)
         logger.info(f"Context Poisoning complete: {succeeded} succeeded, {len(results)} total")
@@ -228,4 +256,6 @@ class ContextPoisoningModule(AttackModule):
             "AATCK-003.T05": "Require cryptographic authentication for admin claims. Never trust self-asserted authority.",
             "AATCK-003.T06": "Validate all memory writes against content policy. Never persist instructions that modify security boundaries. Treat memory as a high-privilege write target.",
             "AATCK-003.T07": "Implement alert deduplication and rate limiting. Never execute instructions embedded in alert streams. Separate alert processing from operational commands.",
-        }.get(technique_id, "Implement persistent system instructions immune to context manipulation.")
+        }.get(
+            technique_id, "Implement persistent system instructions immune to context manipulation."
+        )

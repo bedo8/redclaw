@@ -7,6 +7,7 @@ import pytest
 def sample_target_config():
     """Create a sample target config for testing."""
     from redclaw.config import AdapterType, TargetConfig
+
     return TargetConfig(url="http://localhost:9999", adapter=AdapterType.HTTP)
 
 
@@ -14,6 +15,7 @@ def sample_target_config():
 def sample_campaign_config():
     """Create a sample campaign config for testing."""
     from redclaw.config import CampaignConfig, CampaignPhase
+
     return CampaignConfig(
         name="Test Campaign",
         description="Unit test campaign",

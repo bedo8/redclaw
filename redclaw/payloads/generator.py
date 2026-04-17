@@ -32,24 +32,28 @@ def generate_payloads(
         content = tmpl["content"].replace("{CANARY}", canary)
 
         # Original payload
-        payloads.append(Payload(
-            content=content,
-            technique_id=tmpl.get("technique_id", ""),
-            canary_token=canary,
-            description=tmpl.get("description", f"Payload {i + 1}"),
-        ))
+        payloads.append(
+            Payload(
+                content=content,
+                technique_id=tmpl.get("technique_id", ""),
+                canary_token=canary,
+                description=tmpl.get("description", f"Payload {i + 1}"),
+            )
+        )
 
         # Mutated variants
         if enable_mutations:
             mutations = apply_mutations(content, count=mutations_per_payload)
             for mutated_content, mutation_type in mutations:
-                payloads.append(Payload(
-                    content=mutated_content,
-                    technique_id=tmpl.get("technique_id", ""),
-                    canary_token=canary,
-                    description=f"{tmpl.get('description', 'Payload')} [{mutation_type.value}]",
-                    mutated=True,
-                    mutation_type=mutation_type.value,
-                ))
+                payloads.append(
+                    Payload(
+                        content=mutated_content,
+                        technique_id=tmpl.get("technique_id", ""),
+                        canary_token=canary,
+                        description=f"{tmpl.get('description', 'Payload')} [{mutation_type.value}]",
+                        mutated=True,
+                        mutation_type=mutation_type.value,
+                    )
+                )
 
     return payloads

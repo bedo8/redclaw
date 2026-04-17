@@ -45,6 +45,7 @@ class CampaignResult:
     @property
     def defended_attacks(self) -> int:
         from redclaw.attacks.base import AttackStatus
+
         return sum(1 for r in self.all_results if r.status == AttackStatus.DEFENDED)
 
     @property
@@ -135,10 +136,7 @@ class CampaignEngine:
                 phase_result.modules_run.append(module_id)
 
                 succeeded = sum(1 for r in results if r.succeeded)
-                logger.info(
-                    f"  Module complete: {len(results)} attacks, "
-                    f"{succeeded} succeeded"
-                )
+                logger.info(f"  Module complete: {len(results)} attacks, {succeeded} succeeded")
 
             except KeyError as exc:
                 logger.error(f"  Module not found: {exc}")
@@ -151,12 +149,15 @@ class CampaignEngine:
             return HttpAgentAdapter(self._target)
         if self._target.adapter == AdapterType.OPENCLAW:
             from redclaw.adapters.openclaw import OpenClawAdapter
+
             return OpenClawAdapter(self._target)
         if self._target.adapter == AdapterType.MCP:
             from redclaw.adapters.mcp import MCPAdapter
+
             return MCPAdapter(self._target)
         if self._target.adapter == AdapterType.CLAUDE_API:
             from redclaw.adapters.claude_api import ClaudeAPIAdapter
+
             return ClaudeAPIAdapter(self._target)
         raise ValueError(f"Unsupported adapter type: {self._target.adapter}")
 

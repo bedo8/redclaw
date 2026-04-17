@@ -17,4 +17,5 @@ def test_adapter_not_connected():
     adapter = HttpAgentAdapter(config)
     with pytest.raises(RuntimeError, match="not connected"):
         import asyncio
+
         asyncio.run(adapter.send_message("test"))

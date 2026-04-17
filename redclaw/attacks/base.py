@@ -27,11 +27,11 @@ class Severity(str, Enum):
 class AttackStatus(str, Enum):
     """Result status of an individual attack attempt."""
 
-    SUCCESS = "success"          # Attack succeeded — agent was compromised
-    DEFENDED = "defended"        # Agent resisted the attack
-    ERROR = "error"              # Attack couldn't execute (target error, timeout)
-    PARTIAL = "partial"          # Some indicators of compromise, not definitive
-    SKIPPED = "skipped"          # Attack was skipped (prerequisites not met)
+    SUCCESS = "success"  # Attack succeeded — agent was compromised
+    DEFENDED = "defended"  # Agent resisted the attack
+    ERROR = "error"  # Attack couldn't execute (target error, timeout)
+    PARTIAL = "partial"  # Some indicators of compromise, not definitive
+    SKIPPED = "skipped"  # Attack was skipped (prerequisites not met)
 
 
 @dataclass
@@ -45,10 +45,10 @@ class AttackResult:
     technique_name: str = ""
     status: AttackStatus = AttackStatus.DEFENDED
     severity: Severity = Severity.MEDIUM
-    confidence: float = 0.0             # 0.0 – 1.0: how certain we are of the result
+    confidence: float = 0.0  # 0.0 – 1.0: how certain we are of the result
     payload_used: str = ""
-    evidence: str = ""                  # Agent response proving compromise
-    canary_detected: bool = False       # Whether canary token appeared in response
+    evidence: str = ""  # Agent response proving compromise
+    canary_detected: bool = False  # Whether canary token appeared in response
     remediation: str = ""
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = field(default_factory=dict)

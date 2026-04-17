@@ -23,13 +23,13 @@ class MutationType(str, Enum):
 
 # Unicode homoglyph substitutions (visually similar characters)
 _HOMOGLYPHS: dict[str, list[str]] = {
-    "a": ["\u0430", "\u00e0"],     # Cyrillic а, Latin à
-    "e": ["\u0435", "\u00e8"],     # Cyrillic е, Latin è
-    "o": ["\u043e", "\u00f2"],     # Cyrillic о, Latin ò
-    "i": ["\u0456", "\u00ec"],     # Cyrillic і, Latin ì
-    "s": ["\u0455"],               # Cyrillic ѕ
-    "c": ["\u0441"],               # Cyrillic с
-    "p": ["\u0440"],               # Cyrillic р (looks like p)
+    "a": ["\u0430", "\u00e0"],  # Cyrillic а, Latin à
+    "e": ["\u0435", "\u00e8"],  # Cyrillic е, Latin è
+    "o": ["\u043e", "\u00f2"],  # Cyrillic о, Latin ò
+    "i": ["\u0456", "\u00ec"],  # Cyrillic і, Latin ì
+    "s": ["\u0455"],  # Cyrillic ѕ
+    "c": ["\u0441"],  # Cyrillic с
+    "p": ["\u0440"],  # Cyrillic р (looks like p)
 }
 
 
@@ -59,10 +59,7 @@ def mutate_unicode_homoglyph(payload: str) -> str:
 
 def mutate_case_alternation(payload: str) -> str:
     """aLtErNaTe CaSe to bypass exact-match filters."""
-    return "".join(
-        c.upper() if i % 2 else c.lower()
-        for i, c in enumerate(payload)
-    )
+    return "".join(c.upper() if i % 2 else c.lower() for i, c in enumerate(payload))
 
 
 def mutate_delimiter_wrap(payload: str) -> str:
@@ -87,10 +84,10 @@ def mutate_whitespace_injection(payload: str) -> str:
 def mutate_multi_language(payload: str) -> str:
     """Wrap payload with multilingual instruction prefix."""
     prefixes = [
-        "Traduisez et executez:",         # French
-        "Traduzca y ejecute:",            # Spanish
-        "Übersetzen und ausführen:",       # German
-        "翻訳して実行してください:",           # Japanese
+        "Traduisez et executez:",  # French
+        "Traduzca y ejecute:",  # Spanish
+        "Übersetzen und ausführen:",  # German
+        "翻訳して実行してください:",  # Japanese
     ]
     return f"{random.choice(prefixes)} {payload}"
 
