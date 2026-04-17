@@ -82,6 +82,10 @@ class AttackModule(ABC):
     - execute: Run attacks against a target via an adapter
     """
 
+    # Cooperative per-phase budget injected by CampaignEngine before execute().
+    # Modules should check this in their inner loop and stop when exceeded.
+    _timeout_seconds: float | None = None
+
     @property
     @abstractmethod
     def name(self) -> str:
