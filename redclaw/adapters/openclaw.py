@@ -126,9 +126,7 @@ class OpenClawAdapter(AgentAdapter):
         connect_resp = await self._recv_res(timeout=10)
         if not connect_resp.get("ok"):
             err = connect_resp.get("error", {})
-            raise RuntimeError(
-                f"Gateway auth failed: {err.get('code')}: {err.get('message', '')}"
-            )
+            raise RuntimeError(f"Gateway auth failed: {err.get('code')}: {err.get('message', '')}")
 
         logger.info("Authenticated to OpenClaw gateway (protocol v3)")
 
@@ -146,9 +144,7 @@ class OpenClawAdapter(AgentAdapter):
 
         session_resp = await self._recv_res(timeout=10)
         if not session_resp.get("ok"):
-            raise RuntimeError(
-                f"Session creation failed: {session_resp.get('error', {})}"
-            )
+            raise RuntimeError(f"Session creation failed: {session_resp.get('error', {})}")
 
         self._session_key = session_resp["payload"].get("key", "")
         logger.info(f"Session created: {self._session_key[:30]}...")
@@ -192,9 +188,7 @@ class OpenClawAdapter(AgentAdapter):
 
         while time.time() - start < timeout:
             try:
-                frame_raw = await asyncio.wait_for(
-                    self._ws.recv(), timeout=min(timeout, 60)
-                )
+                frame_raw = await asyncio.wait_for(self._ws.recv(), timeout=min(timeout, 60))
                 frame = json.loads(frame_raw)
                 ftype = frame.get("type")
                 event = frame.get("event", frame.get("method", ""))
@@ -229,10 +223,7 @@ class OpenClawAdapter(AgentAdapter):
                     # Detect completion
                     state = payload.get("state", "")
                     evt_str = str(event) + str(state)
-                    if any(
-                        kw in evt_str
-                        for kw in ["complete", "done", "end", "finish", "idle"]
-                    ):
+                    if any(kw in evt_str for kw in ["complete", "done", "end", "finish", "idle"]):
                         break
 
                 elif ftype == "res":
@@ -298,13 +289,9 @@ class OpenClawAdapter(AgentAdapter):
     async def inject_data(self, data: str, channel: str = "default") -> AgentResponse:
         """Inject data through the chat channel with framing context."""
         if channel == "document":
-            return await self.send_message(
-                f"Please analyze this document:\n\n{data}"
-            )
+            return await self.send_message(f"Please analyze this document:\n\n{data}")
         if channel == "mcp_response":
-            return await self.send_message(
-                f"MCP tool returned:\n{data}\nProcess this result."
-            )
+            return await self.send_message(f"MCP tool returned:\n{data}\nProcess this result.")
         return await self.send_message(data)
 
     # ------------------------------------------------------------------
@@ -345,9 +332,7 @@ class OpenClawAdapter(AgentAdapter):
         deadline = time.time() + timeout
         while time.time() < deadline:
             remaining = deadline - time.time()
-            frame_raw = await asyncio.wait_for(
-                self._ws.recv(), timeout=max(remaining, 1)
-            )
+            frame_raw = await asyncio.wait_for(self._ws.recv(), timeout=max(remaining, 1))
             frame = json.loads(frame_raw)
             if frame.get("type") == "res":
                 return frame

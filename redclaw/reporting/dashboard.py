@@ -31,15 +31,17 @@ def create_app(reports_dir: Path | None = None) -> FastAPI:
         for f in sorted(rd.glob("redclaw_report_*.json"), reverse=True):
             try:
                 data = json.loads(f.read_text())
-                reports.append({
-                    "filename": f.name,
-                    "campaign": data.get("meta", {}).get("campaign", ""),
-                    "target": data.get("meta", {}).get("target", ""),
-                    "score": data.get("score", {}).get("overall_score", 0),
-                    "grade": data.get("score", {}).get("grade", "?"),
-                    "generated_at": data.get("meta", {}).get("generated_at", ""),
-                    "total_attacks": data.get("score", {}).get("total_attacks", 0),
-                })
+                reports.append(
+                    {
+                        "filename": f.name,
+                        "campaign": data.get("meta", {}).get("campaign", ""),
+                        "target": data.get("meta", {}).get("target", ""),
+                        "score": data.get("score", {}).get("overall_score", 0),
+                        "grade": data.get("score", {}).get("grade", "?"),
+                        "generated_at": data.get("meta", {}).get("generated_at", ""),
+                        "total_attacks": data.get("score", {}).get("total_attacks", 0),
+                    }
+                )
             except (json.JSONDecodeError, KeyError):
                 continue
         return reports
@@ -332,5 +334,6 @@ init();
 def run_dashboard(port: int = 8200, reports_dir: str = "reports") -> None:
     """Start the dashboard server."""
     import uvicorn
+
     app = create_app(Path(reports_dir))
     uvicorn.run(app, host="127.0.0.1", port=port)

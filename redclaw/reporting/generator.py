@@ -101,7 +101,11 @@ class ReportGenerator:
         overall = score["overall_score"]
 
         grade_color = {
-            "A": "#2DD4BF", "B": "#3B82F6", "C": "#F59E0B", "D": "#EF4444", "F": "#DC2626",
+            "A": "#2DD4BF",
+            "B": "#3B82F6",
+            "C": "#F59E0B",
+            "D": "#EF4444",
+            "F": "#DC2626",
         }.get(grade, "#888")
 
         # Build dimension rows
@@ -110,24 +114,24 @@ class ReportGenerator:
             if dim.get("skipped"):
                 dim_rows += f"""
                 <tr class="dim-row">
-                    <td>{dim['name']}</td>
+                    <td>{dim["name"]}</td>
                     <td class="score-cell" style="color:#6b7280">&mdash;</td>
-                    <td>{dim['weight']:.0%}</td>
+                    <td>{dim["weight"]:.0%}</td>
                     <td>0</td>
                     <td>&mdash;</td>
                     <td>&mdash;</td>
                 </tr>"""
             else:
-                sc = dim['score']
+                sc = dim["score"]
                 sc_color = "#2DD4BF" if sc >= 75 else "#F59E0B" if sc >= 50 else "#EF4444"
                 dim_rows += f"""
                 <tr class="dim-row">
-                    <td>{dim['name']}</td>
+                    <td>{dim["name"]}</td>
                     <td class="score-cell" style="color:{sc_color}">{sc:.0f}</td>
-                    <td>{dim['weight']:.0%}</td>
-                    <td>{dim['attacks']}</td>
-                    <td style="color:#2DD4BF">{dim['defended']}</td>
-                    <td style="color:#EF4444">{dim['succeeded']}</td>
+                    <td>{dim["weight"]:.0%}</td>
+                    <td>{dim["attacks"]}</td>
+                    <td style="color:#2DD4BF">{dim["defended"]}</td>
+                    <td style="color:#EF4444">{dim["succeeded"]}</td>
                 </tr>"""
 
         # Build findings rows
@@ -320,8 +324,5 @@ class ReportGenerator:
 def _escape(text: str) -> str:
     """Basic HTML escaping."""
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )

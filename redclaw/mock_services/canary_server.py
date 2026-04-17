@@ -69,7 +69,9 @@ class CanaryServer:
     async def start(self) -> None:
         """Start the canary HTTP server."""
         self._server = await asyncio.start_server(
-            self._handle_connection, self._host, self._port,
+            self._handle_connection,
+            self._host,
+            self._port,
         )
         logger.info(f"Canary server listening on {self.url}")
 

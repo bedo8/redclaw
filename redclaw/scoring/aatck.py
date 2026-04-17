@@ -53,14 +53,40 @@ AATCK_001 = AATCKClass(
     severity_range=(Severity.HIGH, Severity.CRITICAL),
     target="Agent instruction-following boundary",
     techniques=(
-        Technique("AATCK-001.T01", "Direct Override", "Plaintext instruction override in user message."),
-        Technique("AATCK-001.T02", "Indirect Injection", "Malicious instructions embedded in fetched data."),
-        Technique("AATCK-001.T03", "Delimiter Escape", "Use markdown/XML/system delimiters to break context."),
-        Technique("AATCK-001.T04", "Encoding Evasion", "Base64, Unicode homoglyphs, ROT13 obfuscation."),
-        Technique("AATCK-001.T05", "Role Injection", "Redefine agent identity via role-play framing."),
-        Technique("AATCK-001.T06", "Instruction Smuggling", "Hide instructions in seemingly benign content."),
-        Technique("AATCK-001.T07", "Payload Splitting", "Split malicious instruction across multiple messages."),
-        Technique("AATCK-001.T08", "Few-Shot Poisoning", "Fake examples that lead agent into unsafe patterns."),
+        Technique(
+            "AATCK-001.T01", "Direct Override", "Plaintext instruction override in user message."
+        ),
+        Technique(
+            "AATCK-001.T02",
+            "Indirect Injection",
+            "Malicious instructions embedded in fetched data.",
+        ),
+        Technique(
+            "AATCK-001.T03",
+            "Delimiter Escape",
+            "Use markdown/XML/system delimiters to break context.",
+        ),
+        Technique(
+            "AATCK-001.T04", "Encoding Evasion", "Base64, Unicode homoglyphs, ROT13 obfuscation."
+        ),
+        Technique(
+            "AATCK-001.T05", "Role Injection", "Redefine agent identity via role-play framing."
+        ),
+        Technique(
+            "AATCK-001.T06",
+            "Instruction Smuggling",
+            "Hide instructions in seemingly benign content.",
+        ),
+        Technique(
+            "AATCK-001.T07",
+            "Payload Splitting",
+            "Split malicious instruction across multiple messages.",
+        ),
+        Technique(
+            "AATCK-001.T08",
+            "Few-Shot Poisoning",
+            "Fake examples that lead agent into unsafe patterns.",
+        ),
     ),
     detection=(
         "Monitor for instruction-like patterns in data channels.",
@@ -86,11 +112,29 @@ AATCK_002 = AATCKClass(
     target="Agent tool execution capabilities",
     techniques=(
         Technique("AATCK-002.T01", "Path Traversal", "Coerce file operations to sensitive paths."),
-        Technique("AATCK-002.T02", "HTTP Exfiltration", "Trick agent into sending data to attacker endpoints."),
-        Technique("AATCK-002.T03", "Shell Injection", "Inject shell metacharacters into tool parameters."),
-        Technique("AATCK-002.T04", "Tool Chain Attack", "Chain legitimate tool calls for malicious outcome."),
-        Technique("AATCK-002.T05", "Parameter Pollution", "Overloaded parameters that change tool behavior."),
-        Technique("AATCK-002.T06", "Privilege Escalation via Tools", "Access resources beyond intended scope."),
+        Technique(
+            "AATCK-002.T02",
+            "HTTP Exfiltration",
+            "Trick agent into sending data to attacker endpoints.",
+        ),
+        Technique(
+            "AATCK-002.T03", "Shell Injection", "Inject shell metacharacters into tool parameters."
+        ),
+        Technique(
+            "AATCK-002.T04",
+            "Tool Chain Attack",
+            "Chain legitimate tool calls for malicious outcome.",
+        ),
+        Technique(
+            "AATCK-002.T05",
+            "Parameter Pollution",
+            "Overloaded parameters that change tool behavior.",
+        ),
+        Technique(
+            "AATCK-002.T06",
+            "Privilege Escalation via Tools",
+            "Access resources beyond intended scope.",
+        ),
     ),
     detection=(
         "Audit tool calls for sensitive paths, external URLs, shell metacharacters.",
@@ -115,13 +159,39 @@ AATCK_003 = AATCKClass(
     severity_range=(Severity.MEDIUM, Severity.HIGH),
     target="Agent working memory and conversation context",
     techniques=(
-        Technique("AATCK-003.T01", "Gradual Trust Escalation", "Slowly escalate from benign to restricted requests."),
-        Technique("AATCK-003.T02", "Persona Drift", "Redefine agent role through conversational framing."),
-        Technique("AATCK-003.T03", "False Memory Implantation", "Insert false claims about prior conversations."),
-        Technique("AATCK-003.T04", "Context Flooding", "Fill context window with noise to push out instructions."),
-        Technique("AATCK-003.T05", "Authority Spoofing", "Claim admin/developer role to gain elevated trust."),
-        Technique("AATCK-003.T06", "Persistent Memory Poisoning", "Inject false context into agent memory for future session manipulation."),
-        Technique("AATCK-003.T07", "Multi-turn Alert Fatigue", "Flood alerts to desensitize agent, then smuggle instructions in the noise."),
+        Technique(
+            "AATCK-003.T01",
+            "Gradual Trust Escalation",
+            "Slowly escalate from benign to restricted requests.",
+        ),
+        Technique(
+            "AATCK-003.T02", "Persona Drift", "Redefine agent role through conversational framing."
+        ),
+        Technique(
+            "AATCK-003.T03",
+            "False Memory Implantation",
+            "Insert false claims about prior conversations.",
+        ),
+        Technique(
+            "AATCK-003.T04",
+            "Context Flooding",
+            "Fill context window with noise to push out instructions.",
+        ),
+        Technique(
+            "AATCK-003.T05",
+            "Authority Spoofing",
+            "Claim admin/developer role to gain elevated trust.",
+        ),
+        Technique(
+            "AATCK-003.T06",
+            "Persistent Memory Poisoning",
+            "Inject false context into agent memory for future session manipulation.",
+        ),
+        Technique(
+            "AATCK-003.T07",
+            "Multi-turn Alert Fatigue",
+            "Flood alerts to desensitize agent, then smuggle instructions in the noise.",
+        ),
     ),
     detection=(
         "Track persona consistency across turns.",
@@ -147,10 +217,26 @@ AATCK_004 = AATCKClass(
     severity_range=(Severity.MEDIUM, Severity.CRITICAL),
     target="Agent objective function and task prioritization",
     techniques=(
-        Technique("AATCK-004.T01", "Priority Inversion", "Present fabricated urgent task superseding real mission."),
-        Technique("AATCK-004.T02", "Alert Fatigue Exploitation", "Flood false positives to make agent ignore real alerts."),
-        Technique("AATCK-004.T03", "Objective Reframing", "Redefine what 'success' means for the agent's task."),
-        Technique("AATCK-004.T04", "Distraction Injection", "Insert irrelevant tasks that consume agent resources."),
+        Technique(
+            "AATCK-004.T01",
+            "Priority Inversion",
+            "Present fabricated urgent task superseding real mission.",
+        ),
+        Technique(
+            "AATCK-004.T02",
+            "Alert Fatigue Exploitation",
+            "Flood false positives to make agent ignore real alerts.",
+        ),
+        Technique(
+            "AATCK-004.T03",
+            "Objective Reframing",
+            "Redefine what 'success' means for the agent's task.",
+        ),
+        Technique(
+            "AATCK-004.T04",
+            "Distraction Injection",
+            "Insert irrelevant tasks that consume agent resources.",
+        ),
     ),
     detection=(
         "Monitor task completion rates against expected baselines.",
@@ -174,11 +260,27 @@ AATCK_005 = AATCKClass(
     severity_range=(Severity.HIGH, Severity.CRITICAL),
     target="MCP server connections, tool descriptions, tool responses",
     techniques=(
-        Technique("AATCK-005.T01", "Tool Description Injection", "Embed instructions in MCP tool descriptions."),
-        Technique("AATCK-005.T02", "Poisoned Tool Response", "Return malicious instructions in tool response data."),
-        Technique("AATCK-005.T03", "Tool Name Spoofing", "Register tool mimicking a trusted tool name."),
-        Technique("AATCK-005.T04", "Excessive Permission Tool", "Offer tools with overly broad capabilities."),
-        Technique("AATCK-005.T05", "Schema Manipulation", "Return data mismatching declared schema."),
+        Technique(
+            "AATCK-005.T01",
+            "Tool Description Injection",
+            "Embed instructions in MCP tool descriptions.",
+        ),
+        Technique(
+            "AATCK-005.T02",
+            "Poisoned Tool Response",
+            "Return malicious instructions in tool response data.",
+        ),
+        Technique(
+            "AATCK-005.T03", "Tool Name Spoofing", "Register tool mimicking a trusted tool name."
+        ),
+        Technique(
+            "AATCK-005.T04",
+            "Excessive Permission Tool",
+            "Offer tools with overly broad capabilities.",
+        ),
+        Technique(
+            "AATCK-005.T05", "Schema Manipulation", "Return data mismatching declared schema."
+        ),
     ),
     detection=(
         "Validate MCP tool descriptions for instruction-like content.",
@@ -203,11 +305,25 @@ AATCK_006 = AATCKClass(
     severity_range=(Severity.HIGH, Severity.CRITICAL),
     target="Agent access to sensitive data",
     techniques=(
-        Technique("AATCK-006.T01", "System Prompt Extraction", "Trick agent into revealing its system prompt."),
-        Technique("AATCK-006.T02", "Credential Harvesting", "Coerce agent into exposing API keys or tokens."),
-        Technique("AATCK-006.T03", "Indirect Exfiltration", "Agent includes sensitive data in tool calls."),
+        Technique(
+            "AATCK-006.T01",
+            "System Prompt Extraction",
+            "Trick agent into revealing its system prompt.",
+        ),
+        Technique(
+            "AATCK-006.T02",
+            "Credential Harvesting",
+            "Coerce agent into exposing API keys or tokens.",
+        ),
+        Technique(
+            "AATCK-006.T03", "Indirect Exfiltration", "Agent includes sensitive data in tool calls."
+        ),
         Technique("AATCK-006.T04", "Training Data Extraction", "Extract memorized training data."),
-        Technique("AATCK-006.T05", "Cross-Conversation Leakage", "Extract info from other users' sessions."),
+        Technique(
+            "AATCK-006.T05",
+            "Cross-Conversation Leakage",
+            "Extract info from other users' sessions.",
+        ),
     ),
     detection=(
         "Monitor responses for credential patterns.",
@@ -232,11 +348,29 @@ AATCK_007 = AATCKClass(
     severity_range=(Severity.CRITICAL, Severity.CRITICAL),
     target="Inter-agent communication and trust relationships",
     techniques=(
-        Technique("AATCK-007.T01", "Sub-Agent Poisoning", "Compromise sub-agent to manipulate orchestrator."),
-        Technique("AATCK-007.T02", "Credential Relay", "Use compromised agent's credentials for lateral movement."),
-        Technique("AATCK-007.T03", "Trust Chain Exploitation", "Exploit implicit trust between agents."),
-        Technique("AATCK-007.T04", "Orchestrator Manipulation", "Target orchestrator to control entire workflow."),
-        Technique("AATCK-007.T05", "Sub-Agent Pivot", "Spawn sub-agents to bypass parent security boundaries via lateral movement."),
+        Technique(
+            "AATCK-007.T01",
+            "Sub-Agent Poisoning",
+            "Compromise sub-agent to manipulate orchestrator.",
+        ),
+        Technique(
+            "AATCK-007.T02",
+            "Credential Relay",
+            "Use compromised agent's credentials for lateral movement.",
+        ),
+        Technique(
+            "AATCK-007.T03", "Trust Chain Exploitation", "Exploit implicit trust between agents."
+        ),
+        Technique(
+            "AATCK-007.T04",
+            "Orchestrator Manipulation",
+            "Target orchestrator to control entire workflow.",
+        ),
+        Technique(
+            "AATCK-007.T05",
+            "Sub-Agent Pivot",
+            "Spawn sub-agents to bypass parent security boundaries via lateral movement.",
+        ),
     ),
     detection=(
         "Validate sub-agent outputs against expected schemas.",
@@ -261,13 +395,41 @@ AATCK_008 = AATCKClass(
     severity_range=(Severity.MEDIUM, Severity.CRITICAL),
     target="Agent social compliance and trust calibration",
     techniques=(
-        Technique("AATCK-008.T01", "Trust Escalation", "Build rapport then request restricted information."),
-        Technique("AATCK-008.T02", "Authority Impersonation", "Claim security/admin role to gain elevated access."),
-        Technique("AATCK-008.T03", "Helpfulness Exploitation", "Leverage the agent's desire to be helpful for sensitive access."),
-        Technique("AATCK-008.T04", "Reciprocity Exploitation", "Offer information to get sensitive data in return."),
-        Technique("AATCK-008.T05", "Urgency/Scarcity Framing", "Create time pressure to bypass deliberation."),
-        Technique("AATCK-008.T06", "Declared Intent Bias", "Announce testing/pentest to make agent more forthcoming."),
-        Technique("AATCK-008.T07", "Collaborative Framing", "Position as teammate/developer to access privileged info."),
+        Technique(
+            "AATCK-008.T01",
+            "Trust Escalation",
+            "Build rapport then request restricted information.",
+        ),
+        Technique(
+            "AATCK-008.T02",
+            "Authority Impersonation",
+            "Claim security/admin role to gain elevated access.",
+        ),
+        Technique(
+            "AATCK-008.T03",
+            "Helpfulness Exploitation",
+            "Leverage the agent's desire to be helpful for sensitive access.",
+        ),
+        Technique(
+            "AATCK-008.T04",
+            "Reciprocity Exploitation",
+            "Offer information to get sensitive data in return.",
+        ),
+        Technique(
+            "AATCK-008.T05",
+            "Urgency/Scarcity Framing",
+            "Create time pressure to bypass deliberation.",
+        ),
+        Technique(
+            "AATCK-008.T06",
+            "Declared Intent Bias",
+            "Announce testing/pentest to make agent more forthcoming.",
+        ),
+        Technique(
+            "AATCK-008.T07",
+            "Collaborative Framing",
+            "Position as teammate/developer to access privileged info.",
+        ),
     ),
     detection=(
         "Track escalation patterns in request sensitivity across turns.",
@@ -288,7 +450,16 @@ AATCK_008 = AATCKClass(
 # ---------------------------------------------------------------------------
 AATCK_REGISTRY: dict[str, AATCKClass] = {
     c.id: c
-    for c in (AATCK_001, AATCK_002, AATCK_003, AATCK_004, AATCK_005, AATCK_006, AATCK_007, AATCK_008)
+    for c in (
+        AATCK_001,
+        AATCK_002,
+        AATCK_003,
+        AATCK_004,
+        AATCK_005,
+        AATCK_006,
+        AATCK_007,
+        AATCK_008,
+    )
 }
 
 ALL_TECHNIQUES: dict[str, Technique] = {

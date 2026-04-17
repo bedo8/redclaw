@@ -139,11 +139,7 @@ class HttpAgentAdapter(AgentAdapter):
         # Extract tool calls if present
         tool_calls: list[dict[str, Any]] = []
         if isinstance(data, dict):
-            tool_calls = (
-                data.get("tool_calls", [])
-                or data.get("function_calls", [])
-                or []
-            )
+            tool_calls = data.get("tool_calls", []) or data.get("function_calls", []) or []
 
         return AgentResponse(
             text=str(text),

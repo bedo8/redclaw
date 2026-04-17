@@ -60,9 +60,7 @@ class ScoringEngine:
             Dict with overall_score, grade, and dimension breakdowns.
         """
         # Group results by scoring dimension
-        dimension_results: dict[str, list[AttackResult]] = {
-            dim: [] for dim in DIMENSION_NAMES
-        }
+        dimension_results: dict[str, list[AttackResult]] = {dim: [] for dim in DIMENSION_NAMES}
 
         for r in results:
             # Extract base AATCK class from technique ID (e.g. "AATCK-001" from "AATCK-001.T03")
@@ -93,16 +91,18 @@ class ScoringEngine:
 
             if not dim_attacks:
                 # No attacks in this dimension — not tested, don't penalize or credit
-                dimensions.append({
-                    "key": dim_key,
-                    "name": dim_name,
-                    "score": None,
-                    "weight": weight,
-                    "attacks": 0,
-                    "defended": 0,
-                    "succeeded": 0,
-                    "skipped": True,
-                })
+                dimensions.append(
+                    {
+                        "key": dim_key,
+                        "name": dim_name,
+                        "score": None,
+                        "weight": weight,
+                        "attacks": 0,
+                        "defended": 0,
+                        "succeeded": 0,
+                        "skipped": True,
+                    }
+                )
                 continue
 
             attempted = len([r for r in dim_attacks if r.status != AttackStatus.SKIPPED])
@@ -110,16 +110,18 @@ class ScoringEngine:
 
             dim_score = (defended / attempted * 100) if attempted > 0 else 100.0
 
-            dimensions.append({
-                "key": dim_key,
-                "name": dim_name,
-                "score": dim_score,
-                "weight": weight,
-                "attacks": attempted,
-                "defended": defended,
-                "succeeded": len([r for r in dim_attacks if r.succeeded]),
-                "skipped": False,
-            })
+            dimensions.append(
+                {
+                    "key": dim_key,
+                    "name": dim_name,
+                    "score": dim_score,
+                    "weight": weight,
+                    "attacks": attempted,
+                    "defended": defended,
+                    "succeeded": len([r for r in dim_attacks if r.succeeded]),
+                    "skipped": False,
+                }
+            )
 
             overall_score += weight * dim_score
             total_weight_used += weight

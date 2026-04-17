@@ -87,7 +87,9 @@ class RedClawSettings(BaseSettings):
         description="AI endpoint base URL (e.g., OpenAI-compatible proxy)",
     )
     anthropic_api_key: str = Field(default="", description="AI endpoint API key")
-    mutation_model: str = Field(default="claude-sonnet-4-6", description="Model for payload mutation")
+    mutation_model: str = Field(
+        default="claude-sonnet-4-6", description="Model for payload mutation"
+    )
 
     # Canary server
     canary_host: str = Field(default="127.0.0.1", description="Canary server bind address")

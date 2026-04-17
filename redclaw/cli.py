@@ -26,11 +26,17 @@ app.add_typer(attacks_app, name="attacks")
 @app.command()
 def scan(
     target: str = typer.Option(..., "--target", "-t", help="Target agent URL"),
-    adapter: str = typer.Option("http", "--adapter", "-a", help="Adapter type (http, openclaw, mcp, claude_api)"),
-    campaign: str = typer.Option("quick_prompt_injection", "--campaign", "-c", help="Campaign name or YAML path"),
+    adapter: str = typer.Option(
+        "http", "--adapter", "-a", help="Adapter type (http, openclaw, mcp, claude_api)"
+    ),
+    campaign: str = typer.Option(
+        "quick_prompt_injection", "--campaign", "-c", help="Campaign name or YAML path"
+    ),
     output: str = typer.Option("reports", "--output", "-o", help="Output directory for reports"),
     no_mutations: bool = typer.Option(False, "--no-mutations", help="Disable payload mutations"),
-    report_format: str = typer.Option("html", "--format", "-f", help="Report format (html, json, both)"),
+    report_format: str = typer.Option(
+        "html", "--format", "-f", help="Report format (html, json, both)"
+    ),
 ) -> None:
     """Run an adversarial scan against a target AI agent."""
     asyncio.run(_run_scan(target, adapter, campaign, output, no_mutations, report_format))
@@ -61,9 +67,7 @@ async def _run_scan(
         campaign_config = CampaignConfig(
             name=campaign_name,
             description="Quick scan",
-            phases=[
-                CampaignPhase(name="Prompt Injection", attack_modules=["prompt_injection"])
-            ],
+            phases=[CampaignPhase(name="Prompt Injection", attack_modules=["prompt_injection"])],
         )
         console.print(f"  Campaign: [cyan]{campaign_name}[/cyan] (built-in)")
 
@@ -97,6 +101,7 @@ async def _run_scan(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     from redclaw.reporting.generator import ReportGenerator
+
     generator = ReportGenerator(output_dir=output_dir)
 
     if report_format in ("html", "both"):
@@ -116,11 +121,17 @@ def _display_results(result, score) -> None:
 
     # Score card
     grade_color = {
-        "A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "bold red",
+        "A": "green",
+        "B": "blue",
+        "C": "yellow",
+        "D": "red",
+        "F": "bold red",
     }.get(score["grade"], "white")
 
-    console.print(f"  Resilience Score: [{grade_color}]{score['overall_score']:.0f}/100 "
-                  f"(Grade: {score['grade']})[/{grade_color}]")
+    console.print(
+        f"  Resilience Score: [{grade_color}]{score['overall_score']:.0f}/100 "
+        f"(Grade: {score['grade']})[/{grade_color}]"
+    )
     console.print(f"  Total Attacks: {result.total_attacks}")
     console.print(f"  Succeeded: [red]{result.successful_attacks}[/red]")
     console.print(f"  Defended: [green]{result.defended_attacks}[/green]")
@@ -138,7 +149,9 @@ def _display_results(result, score) -> None:
         if dim["score"] is None:
             table.add_row(dim["name"], "[dim]—[/dim]", f"{dim['weight']:.0%}", "0")
         else:
-            score_color = "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
+            score_color = (
+                "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
+            )
             table.add_row(
                 dim["name"],
                 f"[{score_color}]{dim['score']:.0f}[/{score_color}]",
@@ -149,7 +162,9 @@ def _display_results(result, score) -> None:
     console.print(table)
 
     # Critical findings
-    critical_results = [r for r in result.all_results if r.succeeded and r.severity.value in ("CRITICAL", "HIGH")]
+    critical_results = [
+        r for r in result.all_results if r.succeeded and r.severity.value in ("CRITICAL", "HIGH")
+    ]
     if critical_results:
         console.print()
         findings_table = Table(title="Critical Findings", show_lines=True)
@@ -172,7 +187,9 @@ def _display_results(result, score) -> None:
 
 @app.command()
 def report(
-    input_file: str = typer.Option("reports/latest.json", "--input", "-i", help="Input JSON results"),
+    input_file: str = typer.Option(
+        "reports/latest.json", "--input", "-i", help="Input JSON results"
+    ),
     output: str = typer.Option("reports", "--output", "-o", help="Output directory"),
     report_format: str = typer.Option("html", "--format", "-f", help="Report format (html, json)"),
 ) -> None:
@@ -199,20 +216,22 @@ def report(
     # Reconstruct AttackResult objects from JSON findings
     results: list[AttackResult] = []
     for f in data.get("findings", []):
-        results.append(AttackResult(
-            attack_id=f.get("attack_id", ""),
-            module_name=f.get("module", ""),
-            aatck_id=f.get("aatck_id", ""),
-            technique_id=f.get("technique_id", ""),
-            technique_name=f.get("technique_name", ""),
-            status=AttackStatus(f.get("status", "defended")),
-            severity=Severity(f.get("severity", "MEDIUM")),
-            confidence=f.get("confidence", 0.0),
-            canary_detected=f.get("canary_detected", False),
-            evidence=f.get("evidence", ""),
-            remediation=f.get("remediation", ""),
-            payload_used=f.get("payload", ""),
-        ))
+        results.append(
+            AttackResult(
+                attack_id=f.get("attack_id", ""),
+                module_name=f.get("module", ""),
+                aatck_id=f.get("aatck_id", ""),
+                technique_id=f.get("technique_id", ""),
+                technique_name=f.get("technique_name", ""),
+                status=AttackStatus(f.get("status", "defended")),
+                severity=Severity(f.get("severity", "MEDIUM")),
+                confidence=f.get("confidence", 0.0),
+                canary_detected=f.get("canary_detected", False),
+                evidence=f.get("evidence", ""),
+                remediation=f.get("remediation", ""),
+                payload_used=f.get("payload", ""),
+            )
+        )
 
     # Lightweight stand-in for CampaignResult
     @dataclass
@@ -256,6 +275,7 @@ def campaigns_list() -> None:
             continue
         for f in sorted(campaign_dir.glob("*.yaml")):
             import yaml
+
             with f.open() as fh:
                 data = yaml.safe_load(fh)
             table.add_row(
@@ -295,6 +315,7 @@ def dashboard(
     console.print(f"  Reports: {reports_dir}\n")
 
     from redclaw.reporting.dashboard import run_dashboard
+
     run_dashboard(port=port, reports_dir=reports_dir)
 
 

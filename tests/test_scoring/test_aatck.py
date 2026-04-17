@@ -32,6 +32,7 @@ def test_technique_ids_unique():
 def test_technique_ids_follow_pattern():
     """Technique IDs follow AATCK-NNN.TNN pattern."""
     import re
+
     pattern = re.compile(r"AATCK-\d{3}\.T\d{2}")
     for tid in ALL_TECHNIQUES:
         assert pattern.match(tid), f"Bad technique ID format: {tid}"

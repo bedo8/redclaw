@@ -267,7 +267,9 @@ class PromptInjectionModule(AttackModule):
 
         for i, payload in enumerate(all_payloads):
             if _timeout > 0 and _time.time() - _start >= _timeout:
-                logger.warning(f"Module timeout: completed {i}/{len(all_payloads)} payloads in {_timeout}s")
+                logger.warning(
+                    f"Module timeout: completed {i}/{len(all_payloads)} payloads in {_timeout}s"
+                )
                 break
             logger.debug(f"[{i + 1}/{len(all_payloads)}] {payload.description}")
 
@@ -279,17 +281,19 @@ class PromptInjectionModule(AttackModule):
                 response = await adapter.send_message(payload.content)
 
                 if not response.ok:
-                    results.append(AttackResult(
-                        module_name=self.name,
-                        aatck_id="AATCK-001",
-                        technique_id=payload.technique_id,
-                        technique_name=payload.description,
-                        status=AttackStatus.ERROR,
-                        severity=Severity.INFO,
-                        payload_used=payload.content,
-                        evidence=response.error or "Request failed",
-                        remediation="N/A — attack could not execute.",
-                    ))
+                    results.append(
+                        AttackResult(
+                            module_name=self.name,
+                            aatck_id="AATCK-001",
+                            technique_id=payload.technique_id,
+                            technique_name=payload.description,
+                            status=AttackStatus.ERROR,
+                            severity=Severity.INFO,
+                            payload_used=payload.content,
+                            evidence=response.error or "Request failed",
+                            remediation="N/A — attack could not execute.",
+                        )
+                    )
                     continue
 
                 # Observe the response
@@ -312,36 +316,40 @@ class PromptInjectionModule(AttackModule):
                     evidence = f"Agent response (defended): {response.text[:200]}"
                     remediation = ""
 
-                results.append(AttackResult(
-                    module_name=self.name,
-                    aatck_id="AATCK-001",
-                    technique_id=payload.technique_id,
-                    technique_name=payload.description,
-                    status=status,
-                    severity=severity,
-                    confidence=confidence,
-                    payload_used=payload.content,
-                    canary_detected=bool(observation.canary_hits),
-                    evidence=evidence,
-                    remediation=remediation,
-                    metadata={
-                        "mutated": payload.mutated,
-                        "mutation_type": payload.mutation_type,
-                    },
-                ))
+                results.append(
+                    AttackResult(
+                        module_name=self.name,
+                        aatck_id="AATCK-001",
+                        technique_id=payload.technique_id,
+                        technique_name=payload.description,
+                        status=status,
+                        severity=severity,
+                        confidence=confidence,
+                        payload_used=payload.content,
+                        canary_detected=bool(observation.canary_hits),
+                        evidence=evidence,
+                        remediation=remediation,
+                        metadata={
+                            "mutated": payload.mutated,
+                            "mutation_type": payload.mutation_type,
+                        },
+                    )
+                )
 
             except Exception as exc:
                 logger.error(f"Error executing payload: {exc}")
-                results.append(AttackResult(
-                    module_name=self.name,
-                    aatck_id="AATCK-001",
-                    technique_id=payload.technique_id,
-                    technique_name=payload.description,
-                    status=AttackStatus.ERROR,
-                    severity=Severity.INFO,
-                    payload_used=payload.content,
-                    evidence=str(exc),
-                ))
+                results.append(
+                    AttackResult(
+                        module_name=self.name,
+                        aatck_id="AATCK-001",
+                        technique_id=payload.technique_id,
+                        technique_name=payload.description,
+                        status=AttackStatus.ERROR,
+                        severity=Severity.INFO,
+                        payload_used=payload.content,
+                        evidence=str(exc),
+                    )
+                )
 
         # Summary
         succeeded = sum(1 for r in results if r.succeeded)
@@ -369,8 +377,8 @@ class PromptInjectionModule(AttackModule):
         """Map technique to severity."""
         severity_map = {
             "AATCK-001.T01": Severity.HIGH,
-            "AATCK-001.T02": Severity.CRITICAL,   # Indirect — hardest to defend
-            "AATCK-001.T03": Severity.CRITICAL,   # Delimiter escape
+            "AATCK-001.T02": Severity.CRITICAL,  # Indirect — hardest to defend
+            "AATCK-001.T03": Severity.CRITICAL,  # Delimiter escape
             "AATCK-001.T04": Severity.HIGH,
             "AATCK-001.T05": Severity.HIGH,
             "AATCK-001.T06": Severity.MEDIUM,

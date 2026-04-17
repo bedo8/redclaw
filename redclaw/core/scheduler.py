@@ -23,11 +23,11 @@ def get_module(identifier: str, **kwargs) -> AttackModule:
     cls = _MODULE_REGISTRY.get(identifier)
     if cls is None:
         raise KeyError(
-            f"Unknown attack module: {identifier}. "
-            f"Available: {list(_MODULE_REGISTRY.keys())}"
+            f"Unknown attack module: {identifier}. Available: {list(_MODULE_REGISTRY.keys())}"
         )
     # Pass kwargs that the module's __init__ accepts (e.g. enable_mutations)
     import inspect
+
     sig = inspect.signature(cls.__init__)
     valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
     return cls(**valid_kwargs)
@@ -38,12 +38,14 @@ def list_modules() -> list[dict[str, str]]:
     modules = []
     for identifier, cls in _MODULE_REGISTRY.items():
         instance = cls()
-        modules.append({
-            "id": identifier,
-            "name": instance.name,
-            "aatck_ids": ", ".join(instance.aatck_ids),
-            "description": instance.description,
-        })
+        modules.append(
+            {
+                "id": identifier,
+                "name": instance.name,
+                "aatck_ids": ", ".join(instance.aatck_ids),
+                "description": instance.description,
+            }
+        )
     return modules
 
 
@@ -66,6 +68,7 @@ class PhaseResult:
     @property
     def defended_attacks(self) -> int:
         from redclaw.attacks.base import AttackStatus
+
         return sum(1 for r in self.attack_results if r.status == AttackStatus.DEFENDED)
 
 

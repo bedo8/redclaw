@@ -52,11 +52,14 @@ class MCPAdapter(AgentAdapter):
         )
 
         # Send initialize request
-        init_result = await self._send_jsonrpc("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "redclaw", "version": "0.1.0"},
-        })
+        init_result = await self._send_jsonrpc(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "redclaw", "version": "0.1.0"},
+            },
+        )
         logger.info(f"MCP server initialized: {init_result}")
 
         # Send initialized notification
@@ -92,10 +95,13 @@ class MCPAdapter(AgentAdapter):
         tool = tools[0]
         tool_name = tool.get("name", "unknown")
 
-        result = await self._send_jsonrpc("tools/call", {
-            "name": tool_name,
-            "arguments": {"input": message, "query": message},
-        })
+        result = await self._send_jsonrpc(
+            "tools/call",
+            {
+                "name": tool_name,
+                "arguments": {"input": message, "query": message},
+            },
+        )
 
         if result is None:
             return AgentResponse(error="No response from MCP server")
@@ -120,8 +126,12 @@ class MCPAdapter(AgentAdapter):
             async with httpx.AsyncClient(timeout=self._config.timeout_seconds) as client:
                 resp = await client.post(
                     f"{self._config.url}/message",
-                    json={"jsonrpc": "2.0", "method": "tools/call", "id": self._next_id(),
-                          "params": {"name": "query", "arguments": {"input": message}}},
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/call",
+                        "id": self._next_id(),
+                        "params": {"name": "query", "arguments": {"input": message}},
+                    },
                 )
                 data = resp.json()
                 result = data.get("result", {})
@@ -144,11 +154,17 @@ class MCPAdapter(AgentAdapter):
 
         # SSE mode
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=self._config.timeout_seconds) as client:
                 resp = await client.post(
                     f"{self._config.url}/message",
-                    json={"jsonrpc": "2.0", "method": "tools/list", "id": self._next_id(), "params": {}},
+                    json={
+                        "jsonrpc": "2.0",
+                        "method": "tools/list",
+                        "id": self._next_id(),
+                        "params": {},
+                    },
                 )
                 data = resp.json()
                 return data.get("result", {}).get("tools", [])
