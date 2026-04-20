@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from redclaw.config import TargetConfig
 
 
 @dataclass
@@ -102,3 +107,54 @@ class AgentAdapter(ABC):
 
     async def __aexit__(self, *args: object) -> None:
         await self.disconnect()
+
+
+# ---------------------------------------------------------------------------
+# Adapter registry — decorator-based extension point
+# ---------------------------------------------------------------------------
+_ADAPTER_REGISTRY: dict[str, type[AgentAdapter]] = {}
+
+
+def register_adapter(identifier: str) -> Callable[[type[AgentAdapter]], type[AgentAdapter]]:
+    """Decorator: register an AgentAdapter subclass under `identifier`.
+
+    Usage::
+
+        @register_adapter("openclaw")
+        class OpenClawAdapter(AgentAdapter):
+            ...
+
+    The identifier must match an `AdapterType` enum value so that campaign
+    YAML can resolve the adapter at load time.
+    """
+
+    def decorator(cls: type[AgentAdapter]) -> type[AgentAdapter]:
+        _ADAPTER_REGISTRY[identifier] = cls
+        return cls
+
+    return decorator
+
+
+def get_adapter(identifier: str, config: TargetConfig, **kwargs: Any) -> AgentAdapter:
+    """Instantiate a registered adapter by identifier.
+
+    Only kwargs accepted by the adapter's __init__ are forwarded; this mirrors
+    `redclaw.core.scheduler.get_module` so callers can pass a shared kwargs
+    bag without per-adapter branching.
+    """
+    cls = _ADAPTER_REGISTRY.get(identifier)
+    if cls is None:
+        raise KeyError(
+            f"Unknown adapter: {identifier}. Available: {sorted(_ADAPTER_REGISTRY.keys())}"
+        )
+    sig = inspect.signature(cls.__init__)
+    valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+    # Subclasses accept (config, **kwargs); the ABC __init__ is zero-arg so
+    # mypy can't infer the positional — construct via Any to avoid call-arg noise.
+    factory: Any = cls
+    return factory(config, **valid_kwargs)
+
+
+def list_adapters() -> list[str]:
+    """List identifiers of all registered adapters."""
+    return sorted(_ADAPTER_REGISTRY.keys())

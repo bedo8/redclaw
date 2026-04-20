@@ -13,7 +13,7 @@ from typing import Any
 
 from loguru import logger
 
-from redclaw.adapters.base import AgentAdapter, AgentResponse
+from redclaw.adapters.base import AgentAdapter, AgentResponse, register_adapter
 from redclaw.config import TargetConfig
 
 # Optional imports — deferred to connect() so import errors are clear.
@@ -34,6 +34,7 @@ def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
+@register_adapter("openclaw")
 class OpenClawAdapter(AgentAdapter):
     """Adapter for testing OpenClaw agent instances via WebSocket gateway.
 

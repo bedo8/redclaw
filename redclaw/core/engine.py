@@ -10,8 +10,8 @@ from typing import Any
 import yaml
 from loguru import logger
 
-from redclaw.adapters.base import AgentAdapter
-from redclaw.adapters.http_agent import HttpAgentAdapter
+import redclaw.adapters  # noqa: F401 — triggers adapter registrations
+from redclaw.adapters.base import AgentAdapter, get_adapter
 from redclaw.attacks.base import AttackResult
 from redclaw.config import AdapterType, CampaignConfig, CampaignPhase, TargetConfig
 from redclaw.core.scheduler import PhaseResult, get_module
@@ -144,22 +144,11 @@ class CampaignEngine:
         return phase_result
 
     def _create_adapter(self) -> AgentAdapter:
-        """Create the appropriate adapter for the target."""
-        if self._target.adapter == AdapterType.HTTP:
-            return HttpAgentAdapter(self._target)
-        if self._target.adapter == AdapterType.OPENCLAW:
-            from redclaw.adapters.openclaw import OpenClawAdapter
-
-            return OpenClawAdapter(self._target)
-        if self._target.adapter == AdapterType.MCP:
-            from redclaw.adapters.mcp import MCPAdapter
-
-            return MCPAdapter(self._target)
-        if self._target.adapter == AdapterType.CLAUDE_API:
-            from redclaw.adapters.claude_api import ClaudeAPIAdapter
-
-            return ClaudeAPIAdapter(self._target)
-        raise ValueError(f"Unsupported adapter type: {self._target.adapter}")
+        """Create the appropriate adapter for the target via the registry."""
+        try:
+            return get_adapter(self._target.adapter.value, self._target)
+        except KeyError as exc:
+            raise ValueError(f"Unsupported adapter type: {self._target.adapter}") from exc
 
 
 def load_campaign_from_yaml(path: str | Path) -> CampaignConfig:
