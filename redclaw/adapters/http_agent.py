@@ -7,10 +7,11 @@ from typing import Any
 import httpx
 from loguru import logger
 
-from redclaw.adapters.base import AgentAdapter, AgentResponse
+from redclaw.adapters.base import AgentAdapter, AgentResponse, register_adapter
 from redclaw.config import TargetConfig
 
 
+@register_adapter("http")
 class HttpAgentAdapter(AgentAdapter):
     """Adapter for agents accessible via HTTP API.
 

@@ -8,10 +8,11 @@ from typing import Any
 
 from loguru import logger
 
-from redclaw.adapters.base import AgentAdapter, AgentResponse
+from redclaw.adapters.base import AgentAdapter, AgentResponse, register_adapter
 from redclaw.config import TargetConfig
 
 
+@register_adapter("mcp")
 class MCPAdapter(AgentAdapter):
     """Adapter for testing MCP (Model Context Protocol) servers.
 
