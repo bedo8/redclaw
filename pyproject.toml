@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "redclaw"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Adversarial AI Agent Red Team Framework — AATCK-based security assessment for AI agents"
 readme = "README.md"
 license = {text = "MIT"}
@@ -54,8 +54,17 @@ dashboard = [
 [project.scripts]
 redclaw = "redclaw.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/bedo8/redclaw"
+Issues = "https://github.com/bedo8/redclaw/issues"
+Source = "https://github.com/bedo8/redclaw"
+
 [tool.setuptools.packages.find]
 include = ["redclaw*"]
+
+[tool.setuptools_scm]
+version_file = "redclaw/_version.py"
+fallback_version = "0.0.0+unknown"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
