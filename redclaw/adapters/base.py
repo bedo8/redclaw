@@ -68,6 +68,26 @@ class AgentAdapter(ABC):
             List of tool descriptors (name, description, parameters).
         """
 
+    @property
+    def supports_concurrency(self) -> bool:
+        """Whether several attacks may be in flight at once on this adapter.
+
+        Adapters that multiplex one stateful connection (e.g. a single chat
+        session) should leave this False; the engine then runs attacks one
+        at a time regardless of a phase's ``max_concurrent``.
+        """
+        return False
+
+    def fork(self) -> AgentAdapter:
+        """Return a handle for one isolated attack (fresh conversation state).
+
+        The fork shares the connection opened by :meth:`connect` but not the
+        conversation history, so one attack's turns cannot leak into the
+        next. The default returns ``self`` for adapters with no per-
+        conversation state.
+        """
+        return self
+
     async def send_multi_turn(self, messages: list[str]) -> list[AgentResponse]:
         """Send a sequence of messages (for multi-turn attacks).
 

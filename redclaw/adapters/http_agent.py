@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
 import httpx
@@ -10,141 +11,212 @@ from loguru import logger
 from redclaw.adapters.base import AgentAdapter, AgentResponse, register_adapter
 from redclaw.config import TargetConfig
 
+OPENAI_PATH = "/v1/chat/completions"
+# Endpoints tried in order until one answers with something other than 404/405.
+CANDIDATE_PATHS = ("/chat", "/message", OPENAI_PATH, "/")
+_NOT_HERE = {404, 405}
+
 
 @register_adapter("http")
 class HttpAgentAdapter(AgentAdapter):
-    """Adapter for agents accessible via HTTP API.
+    """Adapter for agents reachable over HTTP.
 
-    Supports common patterns:
-    - POST /chat or /message with {"message": "..."} body
-    - Bearer token or custom header authentication
-    - JSON response parsing with tool call extraction
+    Endpoint discovery: the first message is POSTed to ``/chat``,
+    ``/message``, ``/v1/chat/completions`` and ``/`` in turn; the first path
+    that does not answer 404 or 405 is remembered for the rest of the scan.
+    If the target URL already has a path (``http://host/api/agent``) only
+    that path is used.
+
+    Body shapes:
+
+    * ``/v1/chat/completions`` gets an OpenAI-format body
+      (``model`` + ``messages`` with the full conversation so far).
+    * Every other path gets ``{"message": ..., "conversation_id": ...}``.
+
+    Each attack runs in its own :meth:`fork`, so conversation state from one
+    attack never leaks into another, and forks may run concurrently.
     """
 
     def __init__(self, config: TargetConfig) -> None:
         self._config = config
         self._client: httpx.AsyncClient | None = None
         self._conversation_id: str | None = None
+        self._history: list[dict[str, str]] = []
+        self._endpoint: str | None = None
+        self._shared: dict[str, str | None] = {"endpoint": None}
 
     @property
     def adapter_type(self) -> str:
         return "http"
 
-    async def connect(self) -> None:
-        """Create HTTP client with configured auth and timeouts."""
-        headers: dict[str, str] = {"Content-Type": "application/json"}
+    @property
+    def supports_concurrency(self) -> bool:
+        return True
 
+    def fork(self) -> HttpAgentAdapter:
+        clone = copy.copy(self)
+        clone._conversation_id = None
+        clone._history = []
+        return clone
+
+    async def connect(self) -> None:
+        """Create the HTTP client with auth, timeout and TLS settings."""
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._config.auth_token:
             headers["Authorization"] = f"Bearer {self._config.auth_token.get_secret_value()}"
         elif self._config.auth_header:
             headers["Authorization"] = self._config.auth_header.get_secret_value()
+
+        if not self._config.verify_ssl:
+            logger.warning("TLS certificate verification is disabled for the target")
 
         self._client = httpx.AsyncClient(
             base_url=self._config.url,
             headers=headers,
             timeout=httpx.Timeout(self._config.timeout_seconds),
             verify=self._config.verify_ssl,
+            follow_redirects=False,
         )
-        logger.info(f"Connected to HTTP agent at {self._config.url}")
+        logger.info(f"HTTP adapter ready for {self._config.url}")
 
     async def disconnect(self) -> None:
-        """Close HTTP client."""
         if self._client:
             await self._client.aclose()
             self._client = None
-            logger.info("Disconnected from HTTP agent")
 
-    async def send_message(self, message: str) -> AgentResponse:
-        """Send message to agent via POST request.
+    # ------------------------------------------------------------------
+    def _candidate_paths(self) -> tuple[str, ...]:
+        known = self._shared.get("endpoint")
+        if known is not None:
+            return (known,)
+        path = httpx.URL(self._config.url).path
+        if path not in ("", "/"):
+            # The URL itself is the endpoint. Post to it verbatim: a relative ""
+            # would be resolved against base_url and gain a trailing slash.
+            return (self._config.url,)
+        return CANDIDATE_PATHS
 
-        Tries common endpoint patterns in order:
-        1. /chat
-        2. /message
-        3. /v1/chat/completions (OpenAI-compatible)
-        4. / (root)
-        """
-        if not self._client:
-            raise RuntimeError("Adapter not connected. Call connect() first.")
-
-        # Build request body — try common patterns
+    def _body(self, endpoint: str, message: str) -> dict[str, Any]:
+        if endpoint.endswith(OPENAI_PATH):
+            return {
+                "model": self._config.model or "default",
+                "messages": [*self._history, {"role": "user", "content": message}],
+            }
         body: dict[str, Any] = {"message": message}
         if self._conversation_id:
             body["conversation_id"] = self._conversation_id
+        return body
 
-        endpoints = ["/chat", "/message", "/v1/chat/completions", "/"]
+    async def send_message(self, message: str) -> AgentResponse:
+        if not self._client:
+            raise RuntimeError("Adapter not connected. Call connect() first.")
 
-        for endpoint in endpoints:
+        last_status = 404
+        for endpoint in self._candidate_paths():
             try:
-                resp = await self._client.post(endpoint, json=body)
-
-                if resp.status_code == 404:
-                    continue
-
-                return self._parse_response(resp)
-
-            except httpx.ConnectError:
-                logger.error(f"Connection failed to {self._config.url}{endpoint}")
-                return AgentResponse(error=f"Connection failed to {self._config.url}")
+                resp = await self._client.post(endpoint, json=self._body(endpoint, message))
+            except httpx.ConnectError as exc:
+                return AgentResponse(error=f"Connection failed: {exc}", status_code=0)
             except httpx.TimeoutException:
-                logger.warning(f"Timeout on {endpoint}")
-                return AgentResponse(error=f"Timeout on {endpoint}")
+                return AgentResponse(error=f"Timeout on {endpoint or '/'}", status_code=0)
+            except httpx.HTTPError as exc:
+                return AgentResponse(error=f"HTTP error: {exc}", status_code=0)
 
-        return AgentResponse(error="No valid endpoint found", status_code=404)
+            if resp.status_code in _NOT_HERE and len(self._candidate_paths()) > 1:
+                last_status = resp.status_code
+                continue
+
+            if self._shared.get("endpoint") is None:
+                self._shared["endpoint"] = endpoint
+                logger.info(f"Using endpoint {endpoint or self._config.url}")
+
+            parsed = self._parse_response(resp)
+            if parsed.ok:
+                self._history.append({"role": "user", "content": message})
+                self._history.append({"role": "assistant", "content": parsed.text})
+            return parsed
+
+        return AgentResponse(error="No chat endpoint found on target", status_code=last_status)
 
     async def get_available_tools(self) -> list[dict[str, Any]]:
         """Try to discover agent tools via common endpoints."""
         if not self._client:
             return []
-
-        for endpoint in ["/tools", "/v1/tools", "/capabilities"]:
+        for endpoint in ("/tools", "/v1/tools", "/capabilities"):
             try:
                 resp = await self._client.get(endpoint)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    if isinstance(data, list):
-                        return data
-                    return data.get("tools", [])
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
             except (httpx.HTTPError, ValueError):
                 continue
-
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict) and isinstance(data.get("tools"), list):
+                return data["tools"]
         return []
 
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _openai_text(data: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
+            return "", []
+        message = choices[0].get("message") or {}
+        if not isinstance(message, dict):
+            return "", []
+        content = message.get("content") or ""
+        if isinstance(content, list):  # content-part arrays
+            content = "".join(
+                p.get("text", "")
+                for p in content
+                if isinstance(p, dict) and p.get("type") == "text"
+            )
+        tool_calls: list[dict[str, Any]] = []
+        for tc in message.get("tool_calls") or []:
+            if isinstance(tc, dict):
+                fn = tc.get("function") or {}
+                tool_calls.append(
+                    {
+                        "id": tc.get("id"),
+                        "name": fn.get("name", ""),
+                        "arguments": fn.get("arguments"),
+                    }
+                )
+        return str(content), tool_calls
+
     def _parse_response(self, resp: httpx.Response) -> AgentResponse:
-        """Parse HTTP response into standardized AgentResponse."""
+        """Parse an HTTP response into an AgentResponse."""
+        error = None if resp.is_success else f"HTTP {resp.status_code}"
         try:
             data = resp.json()
         except ValueError:
             return AgentResponse(
-                text=resp.text,
-                status_code=resp.status_code,
-                raw={"body": resp.text},
+                text=resp.text, status_code=resp.status_code, raw={"body": resp.text}, error=error
             )
 
-        # Extract text — try common response shapes
         text = ""
+        tool_calls: list[dict[str, Any]] = []
         if isinstance(data, str):
             text = data
         elif isinstance(data, dict):
-            text = (
-                data.get("response", "")
-                or data.get("message", "")
-                or data.get("content", "")
-                or data.get("text", "")
-                or str(data.get("choices", [{}])[0].get("message", {}).get("content", ""))
-            )
-
-            # Track conversation ID if returned
-            if "conversation_id" in data:
+            for key in ("response", "message", "content", "text", "output", "answer"):
+                value = data.get(key)
+                if isinstance(value, str) and value:
+                    text = value
+                    break
+            if not text and "choices" in data:
+                text, tool_calls = self._openai_text(data)
+            if isinstance(data.get("conversation_id"), str):
                 self._conversation_id = data["conversation_id"]
-
-        # Extract tool calls if present
-        tool_calls: list[dict[str, Any]] = []
-        if isinstance(data, dict):
-            tool_calls = data.get("tool_calls", []) or data.get("function_calls", []) or []
+            for key in ("tool_calls", "function_calls"):
+                if not tool_calls and isinstance(data.get(key), list):
+                    tool_calls = [tc for tc in data[key] if isinstance(tc, dict)]
 
         return AgentResponse(
-            text=str(text),
+            text=text,
             tool_calls=tool_calls,
             raw=data if isinstance(data, dict) else {"body": data},
             status_code=resp.status_code,
+            error=error,
         )
