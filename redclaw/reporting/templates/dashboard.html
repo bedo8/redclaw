@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedClaw Dashboard</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --border: #dde1e6; --text: #1d2329;
+    --muted: #5c6670; --accent: #2f5d8a;
+    --ok: #1f7a4d; --warn: #9a6200; --bad: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --surface: #181c21; --border: #2a3038; --text: #e4e7eb;
+      --muted: #98a2ad; --accent: #7aa7d6;
+      --ok: #5cc28e; --warn: #e0a645; --bad: #f0827a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header { padding: 16px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 18px; margin: 0; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tabs button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit;
+  }
+  .tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .hero { text-align: center; }
+  .grade { font-size: 56px; font-weight: 800; line-height: 1; }
+  .muted { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .dim b { font-size: 24px; display: block; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .evidence { color: var(--muted); font-size: 12px; max-width: 320px; overflow-wrap: anywhere; }
+  .report-item {
+    display: flex; gap: 12px; align-items: center; width: 100%; text-align: left;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; color: inherit; font: inherit;
+  }
+  .report-item:hover { border-color: var(--accent); }
+  .report-item .g { font-size: 22px; font-weight: 800; width: 48px; text-align: center; }
+  code { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>RedClaw Dashboard</h1>
+  <div class="muted">Assessment results from <code id="dir"></code></div>
+</header>
+<main id="app"><p class="muted">Loading…</p></main>
+
+<script>
+"use strict";
+const app = document.getElementById("app");
+let allReports = [];
+
+// Every value interpolated into markup goes through esc().
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function num(value, digits) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(digits) : "–";
+}
+function scoreText(s, empty) {
+  return s === null || s === undefined ? empty : num(s, 0);
+}
+function scoreClass(s) {
+  if (s === null || s === undefined) return "muted";
+  return s >= 75 ? "ok" : s >= 50 ? "warn" : "bad";
+}
+
+async function fetchJson(url) {
+  const r = await fetch(url);
+  return r.ok ? r.json() : null;
+}
+
+async function init() {
+  const [latest, reports] = await Promise.all([
+    fetchJson("/api/latest"), fetchJson("/api/reports"),
+  ]);
+  allReports = Array.isArray(reports) ? reports : [];
+  if (latest) renderReport(latest); else renderEmpty();
+}
+
+function tabs(active) {
+  return `<div class="tabs">
+    <button type="button" data-action="latest" aria-pressed="${active === "latest"}">Latest</button>
+    <button type="button" data-action="all" aria-pressed="${active === "all"}">All reports</button>
+  </div>`;
+}
+
+function reportList() {
+  return allReports.map(r => `
+    <button type="button" class="report-item" data-file="${esc(r.filename)}">
+      <span class="g ${scoreClass(r.score)}">${esc(r.grade)}</span>
+      <span>
+        <strong>${esc(r.campaign)}</strong>
+        <span class="muted"> · score ${esc(scoreText(r.score, "n/a"))}</span><br>
+        <span class="muted">${esc(r.target)} · ${esc(r.total_attacks)} attacks ·
+          ${esc(String(r.generated_at || "").slice(0, 10))}</span>
+      </span>
+    </button>`).join("");
+}
+
+function renderReport(data) {
+  const s = data.score || {};
+  const m = data.meta || {};
+  const findings = (data.findings || []).filter(f => f.status === "success");
+
+  const dims = (s.dimensions || []).map(d => `
+    <div class="card dim">
+      <div class="muted">${esc(d.name)}</div>
+      <b class="${scoreClass(d.score)}">${esc(scoreText(d.score, d.errors ? "errored" : "n/a"))}</b>
+      <span class="muted">${esc(d.attacks)} evaluated · ${esc(d.defended)} defended · ${esc(d.errors || 0)} errors</span>
+    </div>`).join("");
+
+  const rows = findings.map(f => `
+    <tr>
+      <td class="bad">${esc(f.severity)}</td>
+      <td><code>${esc(f.technique_id)}</code><br>${esc(f.technique_name || f.technique)}</td>
+      <td>${esc([...(f.owasp_llm || []), ...(f.mitre_atlas || [])].join(", "))}</td>
+      <td class="evidence">${esc(String(f.evidence || "").slice(0, 200))}</td>
+      <td class="evidence">${esc(String(f.remediation || "").slice(0, 200))}</td>
+    </tr>`).join("") || `<tr><td colspan="5" class="ok">No successful attacks.</td></tr>`;
+
+  app.innerHTML = `${tabs("latest")}
+    <section class="card hero">
+      <div class="grade ${scoreClass(s.overall_score)}">${esc(s.grade)}</div>
+      <div>${esc(scoreText(s.overall_score, "not tested"))}${s.overall_score == null ? "" : " / 100"}</div>
+      <div class="muted">${esc(m.campaign)} · ${esc(m.target)} · ${esc(num(m.duration_seconds, 1))}s</div>
+      <div class="muted">${esc(s.total_attacks)} attacks · ${esc(s.total_defended)} defended ·
+        ${esc(s.total_succeeded)} succeeded · ${esc(s.total_errors || 0)} errors</div>
+    </section>
+    <h2>Resilience dimensions</h2>
+    <div class="grid">${dims}</div>
+    <h2>Findings (${findings.length})</h2>
+    <div class="card table-wrap"><table>
+      <thead><tr><th>Severity</th><th>Technique</th><th>Mappings</th><th>Evidence</th><th>Remediation</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    ${allReports.length > 1 ? "<h2>Recent reports</h2>" + reportList() : ""}`;
+}
+
+function renderAll() {
+  app.innerHTML = `${tabs("all")}<h2>All reports</h2>${reportList() || '<p class="muted">None yet.</p>'}`;
+}
+
+function renderEmpty() {
+  app.innerHTML = `<div class="card">
+    <p>No scan results yet.</p>
+    <p class="muted">Run a scan first: <code>redclaw scan --target http://127.0.0.1:9999</code></p>
+  </div>`;
+}
+
+async function loadReport(filename) {
+  const data = await fetchJson("/api/reports/" + encodeURIComponent(filename));
+  if (data && !data.error) renderReport(data);
+}
+
+// Event delegation instead of inline onclick handlers with interpolated values.
+app.addEventListener("click", (event) => {
+  const el = event.target.closest("[data-action], [data-file]");
+  if (!el) return;
+  if (el.dataset.file) loadReport(el.dataset.file);
+  else if (el.dataset.action === "latest") init();
+  else if (el.dataset.action === "all") renderAll();
+});
+
+fetchJson("/api/info").then(info => {
+  document.getElementById("dir").textContent = (info && info.reports_dir) || "";
+});
+init().catch(renderEmpty);
+</script>
+</body>
+</html>

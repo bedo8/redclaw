@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>RedClaw Assessment Report</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --border: #dde1e6; --text: #1d2329;
+    --muted: #5c6670; --accent: #2f5d8a;
+    --ok: #1f7a4d; --warn: #9a6200; --bad: #b42318; --info: #5c6670;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111418; --surface: #181c21; --border: #2a3038; --text: #e4e7eb;
+      --muted: #98a2ad; --accent: #7aa7d6;
+      --ok: #5cc28e; --warn: #e0a645; --bad: #f0827a; --info: #98a2ad;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 1040px; padding: 32px 16px; background: var(--bg);
+    color: var(--text); font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+  h1 { font-size: 24px; margin: 0; }
+  h2 { font-size: 16px; margin: 32px 0 12px; }
+  .muted { color: var(--muted); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px;
+  }
+  .summary { display: grid; grid-template-columns: 160px 1fr; gap: 20px; align-items: center; }
+  .grade { font-size: 64px; font-weight: 800; text-align: center; line-height: 1; }
+  .grade small { display: block; font-size: 14px; font-weight: 500; color: var(--muted); }
+  .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .meta div span { display: block; color: var(--muted); font-size: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+  .stat { text-align: center; }
+  .stat b { display: block; font-size: 22px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font-size: 12px; }
+  .tag {
+    display: inline-block; border: 1px solid var(--border); border-radius: 4px;
+    padding: 0 5px; margin: 1px 2px 1px 0; font-size: 11px; white-space: nowrap;
+  }
+  .sev { font-weight: 700; font-size: 11px; }
+  .sev-CRITICAL, .sev-HIGH, .bad { color: var(--bad); }
+  .sev-MEDIUM, .warn { color: var(--warn); }
+  .sev-LOW, .sev-INFO { color: var(--info); }
+  .ok { color: var(--ok); }
+  .evidence { color: var(--muted); font-size: 12px; max-width: 360px; overflow-wrap: anywhere; }
+  .banner { border-left: 4px solid var(--warn); }
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>RedClaw Assessment Report</h1>
+  <div class="muted">{{ meta.campaign }} &middot; generated {{ meta.generated_at }}</div>
+</header>
+
+{% if not score.tested %}
+<div class="card banner">
+  <strong>Scan inconclusive.</strong> No attack reached the target and produced a verdict
+  ({{ score.total_errors or 0 }} errored). The score below is not a measurement of the agent.
+  {% if meta.error %}<div class="muted">Engine error: {{ meta.error }}</div>{% endif %}
+</div>
+{% endif %}
+
+<section class="card summary" aria-label="Summary">
+  <div class="grade">{{ score.grade }}
+    <small>{% if score.overall_score is none %}not tested{% else %}{{ "%.0f"|format(score.overall_score) }} / 100{% endif %}</small>
+  </div>
+  <div>
+    <div class="meta">
+      <div><span>Target</span><code>{{ meta.target }}</code></div>
+      <div><span>Adapter</span>{{ meta.adapter }}</div>
+      <div><span>Duration</span>{{ "%.1f"|format(meta.duration_seconds or 0) }}s</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>{{ score.total_attacks or 0 }}</b><span class="muted">attacks</span></div>
+      <div class="stat"><b class="ok">{{ score.total_defended or 0 }}</b><span class="muted">defended</span></div>
+      <div class="stat"><b class="bad">{{ score.total_succeeded or 0 }}</b><span class="muted">succeeded</span></div>
+      <div class="stat"><b class="warn">{{ score.total_errors or 0 }}</b><span class="muted">errored</span></div>
+    </div>
+  </div>
+</section>
+
+<h2>Resilience dimensions</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Dimension</th><th>Score</th><th>Weight</th><th>Evaluated</th><th>Defended</th><th>Succeeded</th><th>Errors</th></tr></thead>
+  <tbody>
+  {% for d in score.dimensions or [] %}
+    <tr>
+      <td>{{ d.name }}</td>
+      {% if d.score is none %}
+      <td class="muted">{{ "all errored" if d.errors else "not tested" }}</td>
+      {% else %}
+      <td class="num {{ 'ok' if d.score >= 75 else ('warn' if d.score >= 50 else 'bad') }}">{{ "%.0f"|format(d.score) }}</td>
+      {% endif %}
+      <td class="num">{{ "%.0f"|format((d.weight or 0) * 100) }}%</td>
+      <td class="num">{{ d.attacks }}</td>
+      <td class="num">{{ d.defended }}</td>
+      <td class="num">{{ d.succeeded }}</td>
+      <td class="num">{{ d.errors or 0 }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Findings ({{ failures|length }} successful attacks)</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Severity</th><th>Technique</th><th>Mappings</th><th>Evidence</th><th>Remediation</th></tr></thead>
+  <tbody>
+  {% for f in failures %}
+    <tr>
+      <td><span class="sev sev-{{ f.severity }}">{{ f.severity }}</span></td>
+      <td><code>{{ f.technique_id }}</code><br>{{ f.technique_name or f.technique }}</td>
+      <td>
+        {% for id in f.owasp_llm %}<span class="tag">{{ id }}</span>{% endfor %}
+        {% for id in f.mitre_atlas %}<span class="tag">{{ id }}</span>{% endfor %}
+      </td>
+      <td class="evidence">{{ f.evidence|truncate(300) }}</td>
+      <td class="evidence">{{ f.remediation|truncate(300) }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="ok">No successful attacks.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>Framework coverage</h2>
+<p class="muted">Mappings use {{ meta.frameworks.owasp_llm if meta.frameworks else "OWASP Top 10 for LLM Applications 2025" }}
+  and {{ meta.frameworks.mitre_atlas if meta.frameworks else "MITRE ATLAS" }}.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Framework ID</th><th>Name</th><th>Evaluated</th><th>Succeeded</th></tr></thead>
+  <tbody>
+  {% for row in coverage %}
+    <tr>
+      <td><code>{{ row.id }}</code></td><td>{{ row.name }}</td>
+      <td class="num">{{ row.evaluated }}</td>
+      <td class="num {{ 'bad' if row.succeeded else '' }}">{{ row.succeeded }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4" class="muted">No evaluated attacks.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<footer>RedClaw {{ meta.version }} &middot; AATCK v1.1 &middot; Evidence is redacted for common credential formats.</footer>
+</body>
+</html>
