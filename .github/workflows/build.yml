@@ -45,6 +45,32 @@ jobs:
           path: dist/*
           retention-days: 14
 
+  publish-pypi:
+    name: publish to PyPI (trusted publishing)
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # Configure the matching trusted publisher at
+    # https://pypi.org/manage/project/redclaw/settings/publishing/
+    # (owner bedo8, repo redclaw, workflow build.yml, environment pypi).
+    environment:
+      name: pypi
+      url: https://pypi.org/p/redclaw
+    permissions:
+      id-token: write # OIDC token for trusted publishing; no API token needed
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: redclaw-dist
+          path: dist
+
+      - name: Publish to PyPI
+        # Mints a short-lived OIDC token (no stored secret) and generates PEP 740
+        # Sigstore attestations for each artifact (attestations default to true).
+        uses: pypa/gh-action-pypi-publish@2834a314042ef964da07689278dd1e9d773e8afd # v1.14.2
+        with:
+          attestations: true
+
   release:
     name: attach to GitHub Release
     needs: build
