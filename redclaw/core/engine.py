@@ -7,13 +7,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
 from loguru import logger
 
 import redclaw.adapters  # noqa: F401 — triggers adapter registrations
 from redclaw.adapters.base import AgentAdapter, get_adapter
 from redclaw.attacks.base import AttackResult
-from redclaw.config import AdapterType, CampaignConfig, CampaignPhase, TargetConfig
+from redclaw.config import CampaignConfig, CampaignPhase, TargetConfig
 from redclaw.core.scheduler import PhaseResult, get_module
 
 
@@ -152,27 +151,7 @@ class CampaignEngine:
 
 
 def load_campaign_from_yaml(path: str | Path) -> CampaignConfig:
-    """Load a campaign definition from a YAML file."""
-    path = Path(path)
-    with path.open() as f:
-        data = yaml.safe_load(f)
+    """Load a campaign definition from a YAML file (kept for API compatibility)."""
+    from redclaw.campaigns import load_campaign_file
 
-    phases = [
-        CampaignPhase(
-            name=p["name"],
-            attack_modules=p["attack_modules"],
-            timeout_seconds=p.get("timeout_seconds", 300),
-            max_concurrent=p.get("max_concurrent", 5),
-        )
-        for p in data.get("phases", [])
-    ]
-
-    return CampaignConfig(
-        name=data["name"],
-        description=data.get("description", ""),
-        version=data.get("version", "1.0"),
-        target_adapter=AdapterType(data.get("target_adapter", "http")),
-        phases=phases,
-        payload_mutations=data.get("payload_mutations", True),
-        max_total_attacks=data.get("max_total_attacks", 200),
-    )
+    return load_campaign_file(path)

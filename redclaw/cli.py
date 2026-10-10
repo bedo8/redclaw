@@ -51,25 +51,21 @@ async def _run_scan(
     report_format: str,
 ) -> None:
     """Async scan implementation."""
-    from redclaw.config import AdapterType, CampaignConfig, CampaignPhase, TargetConfig
-    from redclaw.core.engine import CampaignEngine, load_campaign_from_yaml
+    from redclaw.config import AdapterType, TargetConfig
+    from redclaw.core.engine import CampaignEngine
     from redclaw.scoring.engine import ScoringEngine
 
     console.print("\n[bold red]RedClaw[/bold red] — Adversarial AI Agent Red Team Framework\n")
 
-    # Load campaign
-    campaign_path = _resolve_campaign(campaign_name)
-    if campaign_path:
-        campaign_config = load_campaign_from_yaml(campaign_path)
-        console.print(f"  Campaign: [cyan]{campaign_config.name}[/cyan]")
-    else:
-        # Default quick campaign
-        campaign_config = CampaignConfig(
-            name=campaign_name,
-            description="Quick scan",
-            phases=[CampaignPhase(name="Prompt Injection", attack_modules=["prompt_injection"])],
-        )
-        console.print(f"  Campaign: [cyan]{campaign_name}[/cyan] (built-in)")
+    # Load campaign — unknown names are an error, never a silent default.
+    from redclaw.campaigns import CampaignLoadError, CampaignNotFoundError, resolve_campaign
+
+    try:
+        campaign_config = resolve_campaign(campaign_name)
+    except (CampaignNotFoundError, CampaignLoadError) as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(1) from None
+    console.print(f"  Campaign: [cyan]{campaign_config.name}[/cyan]")
 
     if no_mutations:
         campaign_config.payload_mutations = False
@@ -274,30 +270,17 @@ def report(
 
 @campaigns_app.command("list")
 def campaigns_list() -> None:
-    """List available campaigns."""
-    campaign_dirs = [
-        Path(__file__).parent.parent / "campaigns",
-        Path.cwd() / "campaigns",
-    ]
+    """List built-in campaigns and any YAML campaigns in ./campaigns."""
+    from redclaw.campaigns import list_campaigns
 
     table = Table(title="Available Campaigns")
-    table.add_column("Name", style="cyan")
-    table.add_column("File")
+    table.add_column("Key", style="cyan")
+    table.add_column("Name")
+    table.add_column("Source")
     table.add_column("Description", max_width=50)
 
-    for campaign_dir in campaign_dirs:
-        if not campaign_dir.exists():
-            continue
-        for f in sorted(campaign_dir.glob("*.yaml")):
-            import yaml
-
-            with f.open() as fh:
-                data = yaml.safe_load(fh)
-            table.add_row(
-                data.get("name", f.stem),
-                str(f.name),
-                data.get("description", "")[:50],
-            )
+    for info in list_campaigns():
+        table.add_row(info.key, info.name, info.source, info.description[:50])
 
     console.print(table)
 
@@ -332,34 +315,6 @@ def dashboard(
     from redclaw.reporting.dashboard import run_dashboard
 
     run_dashboard(port=port, reports_dir=reports_dir)
-
-
-def _resolve_campaign(name: str) -> Path | None:
-    """Resolve a campaign name to a YAML file path."""
-    # Direct path
-    direct = Path(name)
-    if direct.exists() and direct.suffix in (".yaml", ".yml"):
-        return direct
-
-    # Check built-in campaigns
-    builtin_dir = Path(__file__).parent.parent / "campaigns"
-    for candidate in [
-        builtin_dir / f"{name}.yaml",
-        builtin_dir / f"{name}.yml",
-    ]:
-        if candidate.exists():
-            return candidate
-
-    # Check CWD campaigns
-    cwd_dir = Path.cwd() / "campaigns"
-    for candidate in [
-        cwd_dir / f"{name}.yaml",
-        cwd_dir / f"{name}.yml",
-    ]:
-        if candidate.exists():
-            return candidate
-
-    return None
 
 
 if __name__ == "__main__":

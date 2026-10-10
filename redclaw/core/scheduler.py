@@ -30,6 +30,11 @@ def get_module(identifier: str, **kwargs) -> AttackModule:
     return cls(**valid_kwargs)
 
 
+def registered_module_ids() -> list[str]:
+    """Identifiers of all registered attack modules."""
+    return sorted(_MODULE_REGISTRY)
+
+
 def list_modules() -> list[dict[str, str]]:
     """List all registered attack modules."""
     modules = []

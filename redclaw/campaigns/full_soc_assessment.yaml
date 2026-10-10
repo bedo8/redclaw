@@ -1,4 +1,4 @@
-name: Full SOC Agent Assessment
+name: Full Agent Assessment
 description: >
   Comprehensive adversarial assessment covering all 8 AATCK classes.
   Runs prompt injection, tool abuse, context poisoning, goal hijacking,
