@@ -181,7 +181,7 @@ async def test_phase_timeout_stops_module() -> None:
 
     register_module("_eight", Slow)
     module = Slow()
-    module.configure(timeout_seconds=0.05, max_concurrent=1)
+    module.configure(timeout_seconds=0.5, max_concurrent=1)  # ~25 of 200 payloads fit
     target = _target()
     from redclaw.adapters.base import get_adapter
 
