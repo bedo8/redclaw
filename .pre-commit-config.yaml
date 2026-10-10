@@ -1,13 +1,11 @@
 # Pre-commit hooks for RedClaw.
 # Install: pip install pre-commit && pre-commit install
 # Manual run on all files: pre-commit run --all-files
-#
-# Hooks are pinned to specific revs for reproducibility; bump via
-# `pre-commit autoupdate` when CVEs or major improvements land.
+# Bump revs with `pre-commit autoupdate`.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -19,19 +17,20 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.4
+    rev: v0.17.0
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: ["--fix"]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v2.4.0
     hooks:
       - id: mypy
         additional_dependencies:
-          - "types-PyYAML>=6.0"
-          - "pydantic>=2.5"
+          - "types-PyYAML>=6.0.12"
+          - "pydantic>=2.7,<3"
+          - "pydantic-settings>=2.4,<3"
         args: ["--config-file=pyproject.toml"]
         files: ^redclaw/
 
@@ -40,4 +39,4 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: '\.mypy_cache|\.ruff_cache|\.pytest_cache|\.git/|reports/|egg-info|\.coverage'
+        exclude: '\.mypy_cache|\.ruff_cache|\.pytest_cache|\.git/|reports/|egg-info|\.coverage|requirements\.lock|tests/data/'

@@ -5,37 +5,36 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: py${{ matrix.python-version }} / ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-
+  lint:
+    name: lint + types
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          fetch-depth: 0  # setuptools-scm needs full history
+          fetch-depth: 0 # setuptools-scm reads tags
+          persist-credentials: false
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
           cache: pip
-          cache-dependency-path: pyproject.toml
+          cache-dependency-path: requirements.lock
 
-      - name: Install
+      - name: Install (locked)
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,openclaw]"
+          pip install --require-hashes -r requirements.lock
+          pip install --no-deps -e .
 
       - name: Ruff (lint)
         run: ruff check redclaw/ tests/ --output-format=github
@@ -46,13 +45,145 @@ jobs:
       - name: Mypy
         run: mypy redclaw/
 
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Audit locked dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "pip-audit>=2.9,<3"
+          pip-audit --require-hashes --disable-pip -r requirements.lock
+
+  test:
+    name: py${{ matrix.python-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install (locked)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements.lock
+          pip install --no-deps -e .
+
       - name: Pytest
         run: pytest --cov-report=xml --cov-report=term
 
-      - name: Upload coverage artifact
-        if: failure()
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-py${{ matrix.python-version }}-${{ matrix.os }}
           path: coverage.xml
           retention-days: 7
+          if-no-files-found: ignore
+
+  e2e:
+    name: end-to-end (mock agent + mock MCP server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.13"
+
+      - name: Build and install the wheel (no extras)
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+          pip install dist/*.whl
+
+      - name: Start the bundled mock agent
+        run: |
+          cd "$RUNNER_TEMP"
+          python -m redclaw.mock_services.mock_agent --port 9999 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:9999/health && break
+            sleep 1
+          done
+
+      - name: Scan the mock agent (full campaign, all formats)
+        run: |
+          cd "$RUNNER_TEMP"
+          # Exit 3 = findings, which the deliberately vulnerable agent must produce.
+          set +e
+          redclaw scan --target http://127.0.0.1:9999 --campaign full_soc_assessment \
+            --format all --output e2e-reports --fail-on-findings
+          code=$?
+          set -e
+          test "$code" -eq 3
+          python - <<'EOF'
+          import json
+          doc = json.load(open("e2e-reports/latest.json"))
+          sarif = json.load(open("e2e-reports/latest.sarif"))
+          score = doc["score"]
+          assert score["tested"], score
+          assert score["total_errors"] == 0, score
+          assert score["total_succeeded"] > 0, score
+          assert sarif["version"] == "2.1.0"
+          assert any(r["kind"] == "fail" for r in sarif["runs"][0]["results"])
+          print(f"grade={score['grade']} score={score['overall_score']:.0f} "
+                f"attacks={score['total_attacks']} succeeded={score['total_succeeded']}")
+          EOF
+
+      - name: Scan the mock MCP server over stdio
+        run: |
+          cd "$RUNNER_TEMP"
+          redclaw scan --adapter mcp --campaign mcp_security_audit \
+            --target "python -m redclaw.mock_services.mock_mcp_server --mode echo" \
+            --format sarif,json --output e2e-mcp
+          python -c "import json; s=json.load(open('e2e-mcp/latest.json'))['score']; assert s['tested'] and s['total_succeeded'] > 0, s"
+
+      - name: Unreachable target must be inconclusive (exit 2), not an F
+        run: |
+          cd "$RUNNER_TEMP"
+          set +e
+          redclaw scan --target http://127.0.0.1:9 --format json --output e2e-down --no-mutations
+          code=$?
+          set -e
+          test "$code" -eq 2
+
+      - name: Re-render a saved report
+        run: |
+          cd "$RUNNER_TEMP"
+          redclaw report --input e2e-reports/latest.json --format html,junit --output e2e-rerender
+          test -s e2e-rerender/latest_report.html
+          test -s e2e-rerender/latest.junit.xml
+
+      - name: Upload e2e reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-reports
+          path: |
+            ${{ runner.temp }}/e2e-reports/latest.*
+            ${{ runner.temp }}/e2e-mcp/latest.*
+          retention-days: 7
+          if-no-files-found: ignore
