@@ -53,8 +53,10 @@ class ClaudeAPIAdapter(AgentAdapter):
             "LLM_PROXY_ENDPOINT",
             os.environ.get("ANTHROPIC_BASE_URL", ""),
         )
-        api_key = self._config.auth_token or os.environ.get(
-            "LLM_PROXY_API_KEY", os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = (
+            self._config.auth_token.get_secret_value()
+            if self._config.auth_token
+            else os.environ.get("LLM_PROXY_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
         )
 
         self._client = AsyncAnthropic(

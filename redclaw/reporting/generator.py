@@ -9,6 +9,8 @@ from typing import Any
 
 from loguru import logger
 
+from redclaw.version import __version__
+
 
 class ReportGenerator:
     """Generates HTML and JSON security assessment reports."""
@@ -58,7 +60,7 @@ class ReportGenerator:
         report_data = {
             "meta": {
                 "tool": "RedClaw",
-                "version": "0.1.0",
+                "version": __version__,
                 "generated_at": datetime.now(UTC).isoformat(),
                 "campaign": campaign_result.campaign_name,
                 "target": campaign_result.target_url,
@@ -313,8 +315,8 @@ class ReportGenerator:
 </table>
 
 <div class="footer">
-  RedClaw v0.1.0 &middot; Adversarial AI Agent Red Team Framework &middot;
-  AATCK Framework v1.0
+  RedClaw v{__version__} &middot; Adversarial AI Agent Red Team Framework &middot;
+  AATCK Framework v1.1
 </div>
 
 </body>

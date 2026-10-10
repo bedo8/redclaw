@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from loguru import logger
-
 from redclaw.attacks.base import AttackModule, AttackResult
 
 # Module registry — maps identifiers to classes
@@ -15,7 +13,6 @@ _MODULE_REGISTRY: dict[str, type[AttackModule]] = {}
 def register_module(identifier: str, module_class: type[AttackModule]) -> None:
     """Register an attack module class for use in campaigns."""
     _MODULE_REGISTRY[identifier] = module_class
-    logger.debug(f"Registered attack module: {identifier}")
 
 
 def get_module(identifier: str, **kwargs) -> AttackModule:

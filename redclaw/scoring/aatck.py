@@ -20,13 +20,70 @@ class Severity(StrEnum):
     INFO = "INFO"
 
 
+# ---------------------------------------------------------------------------
+# External framework references
+# ---------------------------------------------------------------------------
+OWASP_LLM_VERSION = "OWASP Top 10 for LLM Applications 2025"
+OWASP_LLM_URL = "https://genai.owasp.org/llm-top-10/"
+
+OWASP_LLM_TOP10_2025: dict[str, str] = {
+    "LLM01:2025": "Prompt Injection",
+    "LLM02:2025": "Sensitive Information Disclosure",
+    "LLM03:2025": "Supply Chain",
+    "LLM04:2025": "Data and Model Poisoning",
+    "LLM05:2025": "Improper Output Handling",
+    "LLM06:2025": "Excessive Agency",
+    "LLM07:2025": "System Prompt Leakage",
+    "LLM08:2025": "Vector and Embedding Weaknesses",
+    "LLM09:2025": "Misinformation",
+    "LLM10:2025": "Unbounded Consumption",
+}
+
+ATLAS_VERSION = "MITRE ATLAS 2026.09"
+ATLAS_URL = "https://atlas.mitre.org/techniques/"
+
+# Only the ATLAS techniques AATCK maps to. Names are taken verbatim from the
+# ATLAS data release named in ATLAS_VERSION.
+MITRE_ATLAS_TECHNIQUES: dict[str, str] = {
+    "AML.T0011.002": "User Execution: Poisoned AI Agent Tool",
+    "AML.T0034.002": "Cost Harvesting: Agentic Resource Consumption",
+    "AML.T0037": "Data from Local System",
+    "AML.T0050": "Command and Scripting Interpreter",
+    "AML.T0051": "LLM Prompt Injection",
+    "AML.T0051.000": "LLM Prompt Injection: Direct",
+    "AML.T0051.001": "LLM Prompt Injection: Indirect",
+    "AML.T0053": "AI Agent Tool Invocation",
+    "AML.T0054": "LLM Jailbreak",
+    "AML.T0056": "Extract LLM System Prompt",
+    "AML.T0057": "LLM Data Leakage",
+    "AML.T0068": "LLM Prompt Obfuscation",
+    "AML.T0073": "Impersonation",
+    "AML.T0080": "AI Agent Context Poisoning",
+    "AML.T0080.000": "AI Agent Context Poisoning: Memory",
+    "AML.T0080.001": "AI Agent Context Poisoning: Thread",
+    "AML.T0083": "Credentials from AI Agent Configuration",
+    "AML.T0086": "Exfiltration via AI Agent Tool Invocation",
+    "AML.T0098": "AI Agent Tool Credential Harvesting",
+    "AML.T0103": "Deploy AI Agent",
+    "AML.T0110.000": "AI Agent Tool Poisoning: Definition and Instructions",
+    "AML.T0110.002": "AI Agent Tool Poisoning: Runtime Response",
+}
+
+
 @dataclass(frozen=True)
 class Technique:
-    """A specific attack technique within an AATCK class."""
+    """A specific attack technique within an AATCK class.
+
+    ``owasp_llm`` and ``atlas`` hold the external framework IDs the technique
+    maps to. A mapping is only recorded where it is defensible; an empty tuple
+    means "no clear equivalent", not "not yet reviewed".
+    """
 
     id: str
     name: str
     description: str
+    owasp_llm: tuple[str, ...] = ()
+    atlas: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -54,38 +111,60 @@ AATCK_001 = AATCKClass(
     target="Agent instruction-following boundary",
     techniques=(
         Technique(
-            "AATCK-001.T01", "Direct Override", "Plaintext instruction override in user message."
+            "AATCK-001.T01",
+            "Direct Override",
+            "Plaintext instruction override in user message.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051.000",),
         ),
         Technique(
             "AATCK-001.T02",
             "Indirect Injection",
             "Malicious instructions embedded in fetched data.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051.001",),
         ),
         Technique(
             "AATCK-001.T03",
             "Delimiter Escape",
             "Use markdown/XML/system delimiters to break context.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
-            "AATCK-001.T04", "Encoding Evasion", "Base64, Unicode homoglyphs, ROT13 obfuscation."
+            "AATCK-001.T04",
+            "Encoding Evasion",
+            "Base64, Unicode homoglyphs, ROT13 obfuscation.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051", "AML.T0068"),
         ),
         Technique(
-            "AATCK-001.T05", "Role Injection", "Redefine agent identity via role-play framing."
+            "AATCK-001.T05",
+            "Role Injection",
+            "Redefine agent identity via role-play framing.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-001.T06",
             "Instruction Smuggling",
             "Hide instructions in seemingly benign content.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051", "AML.T0068"),
         ),
         Technique(
             "AATCK-001.T07",
             "Payload Splitting",
             "Split malicious instruction across multiple messages.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
             "AATCK-001.T08",
             "Few-Shot Poisoning",
             "Fake examples that lead agent into unsafe patterns.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
     ),
     detection=(
@@ -111,29 +190,47 @@ AATCK_002 = AATCKClass(
     severity_range=(Severity.HIGH, Severity.CRITICAL),
     target="Agent tool execution capabilities",
     techniques=(
-        Technique("AATCK-002.T01", "Path Traversal", "Coerce file operations to sensitive paths."),
+        Technique(
+            "AATCK-002.T01",
+            "Path Traversal",
+            "Coerce file operations to sensitive paths.",
+            owasp_llm=("LLM06:2025",),
+            atlas=("AML.T0053", "AML.T0037"),
+        ),
         Technique(
             "AATCK-002.T02",
             "HTTP Exfiltration",
             "Trick agent into sending data to attacker endpoints.",
+            owasp_llm=("LLM06:2025", "LLM02:2025"),
+            atlas=("AML.T0086",),
         ),
         Technique(
-            "AATCK-002.T03", "Shell Injection", "Inject shell metacharacters into tool parameters."
+            "AATCK-002.T03",
+            "Shell Injection",
+            "Inject shell metacharacters into tool parameters.",
+            owasp_llm=("LLM05:2025", "LLM06:2025"),
+            atlas=("AML.T0053", "AML.T0050"),
         ),
         Technique(
             "AATCK-002.T04",
             "Tool Chain Attack",
             "Chain legitimate tool calls for malicious outcome.",
+            owasp_llm=("LLM06:2025",),
+            atlas=("AML.T0053",),
         ),
         Technique(
             "AATCK-002.T05",
             "Parameter Pollution",
             "Overloaded parameters that change tool behavior.",
+            owasp_llm=("LLM05:2025", "LLM06:2025"),
+            atlas=("AML.T0053",),
         ),
         Technique(
             "AATCK-002.T06",
             "Privilege Escalation via Tools",
             "Access resources beyond intended scope.",
+            owasp_llm=("LLM06:2025",),
+            atlas=("AML.T0053",),
         ),
     ),
     detection=(
@@ -163,34 +260,50 @@ AATCK_003 = AATCKClass(
             "AATCK-003.T01",
             "Gradual Trust Escalation",
             "Slowly escalate from benign to restricted requests.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
-            "AATCK-003.T02", "Persona Drift", "Redefine agent role through conversational framing."
+            "AATCK-003.T02",
+            "Persona Drift",
+            "Redefine agent role through conversational framing.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0080.001",),
         ),
         Technique(
             "AATCK-003.T03",
             "False Memory Implantation",
             "Insert false claims about prior conversations.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0080",),
         ),
         Technique(
             "AATCK-003.T04",
             "Context Flooding",
             "Fill context window with noise to push out instructions.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0080",),
         ),
         Technique(
             "AATCK-003.T05",
             "Authority Spoofing",
             "Claim admin/developer role to gain elevated trust.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0073",),
         ),
         Technique(
             "AATCK-003.T06",
             "Persistent Memory Poisoning",
             "Inject false context into agent memory for future session manipulation.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0080.000",),
         ),
         Technique(
             "AATCK-003.T07",
             "Multi-turn Alert Fatigue",
             "Flood alerts to desensitize agent, then smuggle instructions in the noise.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
     ),
     detection=(
@@ -221,21 +334,29 @@ AATCK_004 = AATCKClass(
             "AATCK-004.T01",
             "Priority Inversion",
             "Present fabricated urgent task superseding real mission.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
             "AATCK-004.T02",
             "Alert Fatigue Exploitation",
             "Flood false positives to make agent ignore real alerts.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
             "AATCK-004.T03",
             "Objective Reframing",
             "Redefine what 'success' means for the agent's task.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
             "AATCK-004.T04",
             "Distraction Injection",
             "Insert irrelevant tasks that consume agent resources.",
+            owasp_llm=("LLM01:2025", "LLM10:2025"),
+            atlas=("AML.T0051", "AML.T0034.002"),
         ),
     ),
     detection=(
@@ -264,22 +385,36 @@ AATCK_005 = AATCKClass(
             "AATCK-005.T01",
             "Tool Description Injection",
             "Embed instructions in MCP tool descriptions.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0110.000",),
         ),
         Technique(
             "AATCK-005.T02",
             "Poisoned Tool Response",
             "Return malicious instructions in tool response data.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0110.002", "AML.T0051.001"),
         ),
         Technique(
-            "AATCK-005.T03", "Tool Name Spoofing", "Register tool mimicking a trusted tool name."
+            "AATCK-005.T03",
+            "Tool Name Spoofing",
+            "Register tool mimicking a trusted tool name.",
+            owasp_llm=("LLM03:2025",),
+            atlas=("AML.T0011.002",),
         ),
         Technique(
             "AATCK-005.T04",
             "Excessive Permission Tool",
             "Offer tools with overly broad capabilities.",
+            owasp_llm=("LLM06:2025",),
+            atlas=(),
         ),
         Technique(
-            "AATCK-005.T05", "Schema Manipulation", "Return data mismatching declared schema."
+            "AATCK-005.T05",
+            "Schema Manipulation",
+            "Return data mismatching declared schema.",
+            owasp_llm=(),
+            atlas=("AML.T0110.002",),
         ),
     ),
     detection=(
@@ -309,20 +444,36 @@ AATCK_006 = AATCKClass(
             "AATCK-006.T01",
             "System Prompt Extraction",
             "Trick agent into revealing its system prompt.",
+            owasp_llm=("LLM07:2025",),
+            atlas=("AML.T0056",),
         ),
         Technique(
             "AATCK-006.T02",
             "Credential Harvesting",
             "Coerce agent into exposing API keys or tokens.",
+            owasp_llm=("LLM02:2025",),
+            atlas=("AML.T0083", "AML.T0098"),
         ),
         Technique(
-            "AATCK-006.T03", "Indirect Exfiltration", "Agent includes sensitive data in tool calls."
+            "AATCK-006.T03",
+            "Indirect Exfiltration",
+            "Agent includes sensitive data in tool calls.",
+            owasp_llm=("LLM02:2025",),
+            atlas=("AML.T0086",),
         ),
-        Technique("AATCK-006.T04", "Training Data Extraction", "Extract memorized training data."),
+        Technique(
+            "AATCK-006.T04",
+            "Training Data Extraction",
+            "Extract memorized training data.",
+            owasp_llm=("LLM02:2025",),
+            atlas=("AML.T0057",),
+        ),
         Technique(
             "AATCK-006.T05",
             "Cross-Conversation Leakage",
             "Extract info from other users' sessions.",
+            owasp_llm=("LLM02:2025",),
+            atlas=("AML.T0057",),
         ),
     ),
     detection=(
@@ -352,24 +503,36 @@ AATCK_007 = AATCKClass(
             "AATCK-007.T01",
             "Sub-Agent Poisoning",
             "Compromise sub-agent to manipulate orchestrator.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051.001",),
         ),
         Technique(
             "AATCK-007.T02",
             "Credential Relay",
             "Use compromised agent's credentials for lateral movement.",
+            owasp_llm=("LLM02:2025",),
+            atlas=("AML.T0083",),
         ),
         Technique(
-            "AATCK-007.T03", "Trust Chain Exploitation", "Exploit implicit trust between agents."
+            "AATCK-007.T03",
+            "Trust Chain Exploitation",
+            "Exploit implicit trust between agents.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0073",),
         ),
         Technique(
             "AATCK-007.T04",
             "Orchestrator Manipulation",
             "Target orchestrator to control entire workflow.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0051",),
         ),
         Technique(
             "AATCK-007.T05",
             "Sub-Agent Pivot",
             "Spawn sub-agents to bypass parent security boundaries via lateral movement.",
+            owasp_llm=("LLM06:2025",),
+            atlas=("AML.T0053", "AML.T0103"),
         ),
     ),
     detection=(
@@ -399,36 +562,50 @@ AATCK_008 = AATCKClass(
             "AATCK-008.T01",
             "Trust Escalation",
             "Build rapport then request restricted information.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-008.T02",
             "Authority Impersonation",
             "Claim security/admin role to gain elevated access.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0073",),
         ),
         Technique(
             "AATCK-008.T03",
             "Helpfulness Exploitation",
             "Leverage the agent's desire to be helpful for sensitive access.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-008.T04",
             "Reciprocity Exploitation",
             "Offer information to get sensitive data in return.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-008.T05",
             "Urgency/Scarcity Framing",
             "Create time pressure to bypass deliberation.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-008.T06",
             "Declared Intent Bias",
             "Announce testing/pentest to make agent more forthcoming.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0054",),
         ),
         Technique(
             "AATCK-008.T07",
             "Collaborative Framing",
             "Position as teammate/developer to access privileged info.",
+            owasp_llm=("LLM01:2025",),
+            atlas=("AML.T0073",),
         ),
     ),
     detection=(
@@ -484,3 +661,15 @@ def get_technique(technique_id: str) -> Technique:
     if tech is None:
         raise KeyError(f"Unknown AATCK technique: {technique_id}")
     return tech
+
+
+def framework_mappings(technique_id: str) -> dict[str, list[str]]:
+    """Return the OWASP LLM Top 10 (2025) and MITRE ATLAS IDs for a technique.
+
+    Unknown technique IDs map to empty lists so reports never fail on a
+    custom module's technique.
+    """
+    tech = ALL_TECHNIQUES.get(technique_id)
+    if tech is None:
+        return {"owasp_llm": [], "mitre_atlas": []}
+    return {"owasp_llm": list(tech.owasp_llm), "mitre_atlas": list(tech.atlas)}

@@ -305,7 +305,7 @@ class OpenClawAdapter(AgentAdapter):
 
         # Gateway token — from config or TargetConfig.auth_token
         if self._config.auth_token:
-            self._gateway_token = self._config.auth_token
+            self._gateway_token = self._config.auth_token.get_secret_value()
         else:
             cfg_path = os.path.join(openclaw_dir, "openclaw.json")
             with open(cfg_path) as f:

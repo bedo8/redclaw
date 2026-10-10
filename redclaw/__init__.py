@@ -5,7 +5,7 @@ Public API (stable across minor versions)::
     from redclaw import run_campaign, Target, Campaign, AdapterType
 
     result = await run_campaign(
-        target=Target(url="http://localhost:8080", adapter=AdapterType.HTTP),
+        target=Target(url="http://127.0.0.1:8080", adapter=AdapterType.HTTP),
         campaign=Campaign(name="quick-scan", phases=[...]),
     )
 
@@ -15,6 +15,8 @@ the names re-exported here for long-lived integrations.
 """
 
 from __future__ import annotations
+
+from loguru import logger
 
 from redclaw.adapters.base import (
     AgentAdapter,
@@ -36,16 +38,11 @@ from redclaw.config import (
     TargetConfig as Target,
 )
 from redclaw.core.engine import CampaignEngine, CampaignResult
+from redclaw.version import __version__
 
-try:
-    from redclaw._version import __version__
-except ImportError:  # running from a source checkout without a build
-    from importlib.metadata import PackageNotFoundError, version
-
-    try:
-        __version__ = version("redclaw")
-    except PackageNotFoundError:
-        __version__ = "0.0.0+unknown"
+# Library code stays quiet unless the caller opts in; the CLI does this via
+# redclaw._logging.configure_logging().
+logger.disable("redclaw")
 
 
 async def run_campaign(target: Target, campaign: Campaign) -> CampaignResult:

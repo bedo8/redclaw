@@ -35,9 +35,9 @@ class HttpAgentAdapter(AgentAdapter):
         headers: dict[str, str] = {"Content-Type": "application/json"}
 
         if self._config.auth_token:
-            headers["Authorization"] = f"Bearer {self._config.auth_token}"
+            headers["Authorization"] = f"Bearer {self._config.auth_token.get_secret_value()}"
         elif self._config.auth_header:
-            headers["Authorization"] = self._config.auth_header
+            headers["Authorization"] = self._config.auth_header.get_secret_value()
 
         self._client = httpx.AsyncClient(
             base_url=self._config.url,
