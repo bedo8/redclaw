@@ -6,7 +6,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from redclaw.config import TargetConfig
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Attack finding severity."""
 
     CRITICAL = "CRITICAL"
@@ -24,7 +24,7 @@ class Severity(str, Enum):
     INFO = "INFO"
 
 
-class AttackStatus(str, Enum):
+class AttackStatus(StrEnum):
     """Result status of an individual attack attempt."""
 
     SUCCESS = "success"  # Attack succeeded — agent was compromised

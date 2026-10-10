@@ -7,10 +7,10 @@ in scoring, reporting, and attack module mapping.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Attack severity levels."""
 
     CRITICAL = "CRITICAL"
@@ -440,7 +440,10 @@ AATCK_008 = AATCKClass(
     remediation=(
         "Implement consistent security boundaries regardless of conversational context.",
         "Never reveal system prompts, credentials, or config regardless of claimed identity.",
-        "Treat pentest declarations the same as any other request — declared intent should not change boundaries.",
+        (
+            "Treat pentest declarations the same as any other request — declared intent should "
+            "not change boundaries."
+        ),
         "Require cryptographic proof of authority, not conversational claims.",
     ),
 )

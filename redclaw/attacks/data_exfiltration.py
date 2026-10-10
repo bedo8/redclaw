@@ -299,11 +299,25 @@ class DataExfiltrationModule(AttackModule):
 
     def _remediation_for(self, technique_id: str) -> str:
         return {
-            "AATCK-006.T01": "Never reveal system prompts. Implement output filtering that blocks system instruction content.",
-            "AATCK-006.T02": "Never expose credentials through agent responses. Use secret managers with no agent read access.",
-            "AATCK-006.T03": "Filter tool call parameters for sensitive data. Block requests that embed credentials in URLs.",
-            "AATCK-006.T04": "Implement output filtering for memorized content patterns. Use model-level safety measures.",
-            "AATCK-006.T05": "Enforce strict session isolation. Never share data between user conversations.",
+            "AATCK-006.T01": (
+                "Never reveal system prompts. Implement output filtering that blocks system "
+                "instruction content."
+            ),
+            "AATCK-006.T02": (
+                "Never expose credentials through agent responses. Use secret managers with no "
+                "agent read access."
+            ),
+            "AATCK-006.T03": (
+                "Filter tool call parameters for sensitive data. Block requests that embed "
+                "credentials in URLs."
+            ),
+            "AATCK-006.T04": (
+                "Implement output filtering for memorized content patterns. Use model-level "
+                "safety measures."
+            ),
+            "AATCK-006.T05": (
+                "Enforce strict session isolation. Never share data between user conversations."
+            ),
         }.get(technique_id, "Implement comprehensive output filtering for sensitive data patterns.")
 
     def _build_evidence(self, response, observation) -> str:

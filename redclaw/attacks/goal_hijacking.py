@@ -177,7 +177,9 @@ class GoalHijackingModule(AttackModule):
                             confidence=0.85 if observation.canary_hits else 0.5,
                             payload_used=payload.content,
                             canary_detected=bool(observation.canary_hits),
-                            evidence=f"Agent redirected from mission. Response: {response.text[:200]}",
+                            evidence=(
+                                f"Agent redirected from mission. Response: {response.text[:200]}"
+                            ),
                             remediation=self._remediation_for(payload.technique_id),
                             metadata={
                                 "mutated": payload.mutated,
@@ -234,8 +236,19 @@ class GoalHijackingModule(AttackModule):
 
     def _remediation_for(self, technique_id: str) -> str:
         return {
-            "AATCK-004.T01": "Hardcode mission priorities. Don't allow external messages to override task queue.",
-            "AATCK-004.T02": "Implement alert deduplication and anomaly scoring. Don't process alerts that embed instructions.",
-            "AATCK-004.T03": "Lock objective definitions in system configuration. Reject runtime redefinition of success metrics.",
-            "AATCK-004.T04": "Implement task isolation. Don't allow new tasks to interrupt mission-critical operations.",
+            "AATCK-004.T01": (
+                "Hardcode mission priorities. Don't allow external messages to override task queue."
+            ),
+            "AATCK-004.T02": (
+                "Implement alert deduplication and anomaly scoring. Don't process alerts that "
+                "embed instructions."
+            ),
+            "AATCK-004.T03": (
+                "Lock objective definitions in system configuration. Reject runtime redefinition "
+                "of success metrics."
+            ),
+            "AATCK-004.T04": (
+                "Implement task isolation. Don't allow new tasks to interrupt mission-critical "
+                "operations."
+            ),
         }.get(technique_id, "Implement immutable mission objectives in system configuration.")

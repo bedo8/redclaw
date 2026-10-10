@@ -279,9 +279,25 @@ class CascadingCompromiseModule(AttackModule):
 
     def _remediation_for(self, technique_id: str) -> str:
         return {
-            "AATCK-007.T01": "Validate all sub-agent outputs. Never execute instructions embedded in sub-agent responses.",
-            "AATCK-007.T02": "Never share credentials between agents. Use scoped, per-agent credentials via secret managers.",
-            "AATCK-007.T03": "Implement cryptographic inter-agent authentication. Never trust self-asserted agent identity.",
-            "AATCK-007.T04": "Protect workflow definitions from runtime modification. Require signed updates from authorized sources.",
-            "AATCK-007.T05": "Sub-agents must inherit the parent's security boundaries, not bypass them. Enforce identical file access restrictions, credential isolation, and network policies on spawned sessions.",
+            "AATCK-007.T01": (
+                "Validate all sub-agent outputs. Never execute instructions embedded in sub-agent "
+                "responses."
+            ),
+            "AATCK-007.T02": (
+                "Never share credentials between agents. Use scoped, per-agent credentials via "
+                "secret managers."
+            ),
+            "AATCK-007.T03": (
+                "Implement cryptographic inter-agent authentication. Never trust self-asserted "
+                "agent identity."
+            ),
+            "AATCK-007.T04": (
+                "Protect workflow definitions from runtime modification. Require signed updates "
+                "from authorized sources."
+            ),
+            "AATCK-007.T05": (
+                "Sub-agents must inherit the parent's security boundaries, not bypass them. "
+                "Enforce identical file access restrictions, credential isolation, and network "
+                "policies on spawned sessions."
+            ),
         }.get(technique_id, "Implement zero-trust between agents with mutual authentication.")

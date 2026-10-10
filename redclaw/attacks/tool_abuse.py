@@ -398,12 +398,28 @@ class ToolAbuseModule(AttackModule):
 
     def _remediation_for(self, technique_id: str) -> str:
         return {
-            "AATCK-002.T01": "Enforce file path allowlists. Block path traversal patterns (../, ~/).",
-            "AATCK-002.T02": "Block or allowlist HTTP destinations. Never allow agent-initiated requests to arbitrary URLs.",
-            "AATCK-002.T03": "Sanitize all tool parameters for shell metacharacters. Use parameterized commands.",
-            "AATCK-002.T04": "Implement tool call sequence validation. Flag multi-step operations that combine read + exfil.",
-            "AATCK-002.T05": "Validate tool parameters against their schema. Reject unexpected or malformed arguments.",
-            "AATCK-002.T06": "Never allow privilege escalation through agent tools. Enforce least-privilege execution context.",
+            "AATCK-002.T01": (
+                "Enforce file path allowlists. Block path traversal patterns (../, ~/)."
+            ),
+            "AATCK-002.T02": (
+                "Block or allowlist HTTP destinations. Never allow agent-initiated requests to "
+                "arbitrary URLs."
+            ),
+            "AATCK-002.T03": (
+                "Sanitize all tool parameters for shell metacharacters. Use parameterized commands."
+            ),
+            "AATCK-002.T04": (
+                "Implement tool call sequence validation. Flag multi-step operations that combine "
+                "read + exfil."
+            ),
+            "AATCK-002.T05": (
+                "Validate tool parameters against their schema. Reject unexpected or malformed "
+                "arguments."
+            ),
+            "AATCK-002.T06": (
+                "Never allow privilege escalation through agent tools. Enforce least-privilege "
+                "execution context."
+            ),
         }.get(technique_id, "Implement strict tool parameter validation.")
 
     def _build_evidence(self, response, observation) -> str:

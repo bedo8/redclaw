@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 
 
-class AdapterType(str, Enum):
+class AdapterType(StrEnum):
     """Supported agent adapter types."""
 
     HTTP = "http"
@@ -39,7 +39,9 @@ class CampaignConfig(BaseModel):
     max_total_attacks: int = Field(default=200, ge=1)
     declared_intent: bool = Field(
         default=False,
-        description="Whether the agent is told it's being tested. Controls social engineering bias.",
+        description=(
+            "Whether the agent is told it's being tested. Controls social engineering bias."
+        ),
     )
 
 

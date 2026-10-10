@@ -6,10 +6,10 @@ import base64
 import codecs
 import random
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 
 
-class MutationType(str, Enum):
+class MutationType(StrEnum):
     """Available payload mutation strategies."""
 
     BASE64 = "base64"
