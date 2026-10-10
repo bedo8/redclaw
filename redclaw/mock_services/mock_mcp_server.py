@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from typing import Any
 
 from loguru import logger
+
+from redclaw.version import __version__
 
 
 class MockMCPServer:
@@ -37,6 +40,7 @@ class MockMCPServer:
                 - "excessive": offers tools with overly broad permissions
                 - "spoofed": mimics trusted tool names
                 - "clean": behaves normally (for baseline comparison)
+                - "echo": a single tool that reflects its input verbatim
         """
         self._mode = mode
         self._request_id = 0
@@ -108,6 +112,18 @@ class MockMCPServer:
                     },
                 },
             ]
+        elif self._mode == "echo":
+            return [
+                {
+                    "name": "echo",
+                    "description": "Returns its input unchanged.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}},
+                        "required": ["text"],
+                    },
+                },
+            ]
         else:  # clean
             return [
                 {
@@ -134,7 +150,7 @@ class MockMCPServer:
                 {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {"tools": {}},
-                    "serverInfo": {"name": f"mock-mcp-{self._mode}", "version": "0.1.0"},
+                    "serverInfo": {"name": f"mock-mcp-{self._mode}", "version": __version__},
                 },
             )
 
@@ -201,6 +217,10 @@ class MockMCPServer:
                 },
             )
 
+        elif self._mode == "echo":
+            text = str((params.get("arguments") or {}).get("text", ""))
+            return self._respond(req_id, {"content": [{"type": "text", "text": text}]})
+
         else:  # clean
             return self._respond(
                 req_id,
@@ -216,8 +236,6 @@ class MockMCPServer:
 
     async def run_stdio(self) -> None:
         """Run as a stdio server (reads stdin, writes stdout)."""
-        import sys
-
         logger.info(f"Mock MCP server starting in {self._mode} mode (stdio)")
 
         reader = asyncio.StreamReader()
@@ -244,3 +262,23 @@ class MockMCPServer:
                 break
 
         logger.info("Mock MCP server stopped")
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Run the mock server on stdio: ``python -m redclaw.mock_services.mock_mcp_server``."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Deliberately vulnerable MCP server (stdio)")
+    parser.add_argument(
+        "--mode",
+        choices=["poisoned", "excessive", "spoofed", "clean", "echo"],
+        default="poisoned",
+    )
+    args = parser.parse_args(argv)
+    logger.remove()  # stdout carries JSON-RPC; keep logs off it
+    logger.add(sys.stderr, level="WARNING")
+    asyncio.run(MockMCPServer(mode=args.mode).run_stdio())
+
+
+if __name__ == "__main__":
+    main()

@@ -14,6 +14,7 @@ import contextlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from urllib.parse import parse_qsl, unquote
 
 from loguru import logger
 
@@ -32,7 +33,7 @@ class CanaryRequest:
 
     def contains_canary(self, token: str) -> bool:
         """Check if this request contains a canary token anywhere."""
-        full_text = f"{self.path} {json.dumps(self.query_params)} {self.body}"
+        full_text = f"{unquote(self.path)} {json.dumps(self.query_params)} {self.body}"
         return token in full_text
 
 
@@ -50,9 +51,13 @@ class CanaryServer:
         await server.stop()
     """
 
+    MAX_CAPTURED = 10_000
+
     def __init__(self, host: str = "127.0.0.1", port: int = 8299) -> None:
         if host != "127.0.0.1":
             raise ValueError("Canary server must bind to 127.0.0.1 only (loopback).")
+        if not 0 <= port <= 65535:
+            raise ValueError("port must be 0-65535 (0 picks a free port)")
         self._host = host
         self._port = port
         self._server: asyncio.Server | None = None
@@ -73,6 +78,8 @@ class CanaryServer:
             self._host,
             self._port,
         )
+        if self._port == 0:
+            self._port = self._server.sockets[0].getsockname()[1]
         logger.info(f"Canary server listening on {self.url}")
 
     async def stop(self) -> None:
@@ -123,15 +130,13 @@ class CanaryServer:
             if "?" in path:
                 path_part, query_string = path.split("?", 1)
                 path = path_part
-                for param in query_string.split("&"):
-                    if "=" in param:
-                        k, v = param.split("=", 1)
-                        query_params[k] = v
+                for k, v in parse_qsl(query_string, keep_blank_values=True):
+                    query_params[k] = v
 
             # Read headers
             headers: dict[str, str] = {}
             content_length = 0
-            while True:
+            for _ in range(100):  # cap header count
                 header_line = await asyncio.wait_for(reader.readline(), timeout=5.0)
                 header_text = header_line.decode("utf-8", errors="replace").strip()
                 if not header_text:
@@ -165,9 +170,10 @@ class CanaryServer:
                 body=body,
                 source_ip=source_ip,
             )
-            self._requests.append(captured)
+            if len(self._requests) < self.MAX_CAPTURED:
+                self._requests.append(captured)
 
-            logger.warning(
+            logger.info(
                 f"Canary hit: {method} {path} "
                 f"params={query_params} body_len={len(body)} "
                 f"from={source_ip}"
@@ -185,7 +191,7 @@ class CanaryServer:
             writer.write(response.encode())
             await writer.drain()
 
-        except (TimeoutError, ConnectionResetError):
+        except (TimeoutError, ConnectionResetError, ValueError, asyncio.IncompleteReadError):
             pass
         finally:
             writer.close()

@@ -2,8 +2,24 @@
 
 from __future__ import annotations
 
-from redclaw.attacks.base import Payload
+import uuid
+
+from redclaw.attacks.base import DEFAULT_CANARY_URL, Payload
 from redclaw.payloads.mutations import apply_mutations
+
+
+def fill_template(template: str, canary: str, canary_url: str = DEFAULT_CANARY_URL) -> str:
+    """Substitute ``{CANARY}`` and ``{CANARY_URL}`` and unescape ``{{``/``}}``.
+
+    Templates escape literal braces format-style (``{{"key": 1}}``), so the
+    target receives real JSON rather than doubled braces.
+    """
+    return (
+        template.replace("{CANARY_URL}", canary_url.rstrip("/"))
+        .replace("{CANARY}", canary)
+        .replace("{{", "{")
+        .replace("}}", "}")
+    )
 
 
 def generate_payloads(
@@ -11,6 +27,7 @@ def generate_payloads(
     canary_prefix: str = "REDCLAW",
     enable_mutations: bool = True,
     mutations_per_payload: int = 2,
+    canary_url: str = DEFAULT_CANARY_URL,
 ) -> list[Payload]:
     """Generate payloads from templates with optional mutations.
 
@@ -23,13 +40,11 @@ def generate_payloads(
     Returns:
         List of Payload objects (originals + mutations).
     """
-    import uuid
-
     payloads: list[Payload] = []
 
     for i, tmpl in enumerate(templates):
         canary = f"{canary_prefix}_CANARY_{uuid.uuid4().hex[:8].upper()}"
-        content = tmpl["content"].replace("{CANARY}", canary)
+        content = fill_template(tmpl["content"], canary, canary_url)
 
         # Original payload
         payloads.append(

@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
+
+from redclaw.version import __version__
 
 app = typer.Typer(
     name="redclaw",
@@ -16,121 +21,189 @@ app = typer.Typer(
 )
 console = Console()
 
-# Sub-command groups
 campaigns_app = typer.Typer(help="Campaign management")
 attacks_app = typer.Typer(help="Attack module management")
 app.add_typer(campaigns_app, name="campaigns")
 app.add_typer(attacks_app, name="attacks")
 
+FORMAT_HELP = "Comma-separated report formats: html, json, sarif, junit, or 'all'"
+
+# Exit codes
+EXIT_OK = 0
+EXIT_USAGE = 1
+EXIT_INCONCLUSIVE = 2
+EXIT_FINDINGS = 3
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(f"redclaw {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    log_level: str | None = typer.Option(
+        None,
+        "--log-level",
+        help="DEBUG, INFO, WARNING, ERROR (default: REDCLAW_LOG_LEVEL or WARNING)",
+    ),
+    version: bool = typer.Option(
+        False, "--version", callback=_version_callback, is_eager=True, help="Show version"
+    ),
+) -> None:
+    """RedClaw — Adversarial AI Agent Red Team Framework."""
+    from redclaw._logging import configure_logging
+    from redclaw.config import RedClawSettings
+
+    settings = RedClawSettings()
+    configure_logging(log_level or settings.log_level, settings.log_file)
+
 
 @app.command()
 def scan(
-    target: str = typer.Option(..., "--target", "-t", help="Target agent URL"),
+    target: str = typer.Option(
+        ...,
+        "--target",
+        "-t",
+        help="Target URL (http/openclaw), MCP command line or http(s) URL (mcp), "
+        "or API base URL (claude_api; empty string uses ANTHROPIC_BASE_URL)",
+    ),
     adapter: str = typer.Option(
-        "http", "--adapter", "-a", help="Adapter type (http, openclaw, mcp, claude_api)"
+        "http", "--adapter", "-a", help="Adapter type: http, openclaw, mcp, claude_api"
     ),
     campaign: str = typer.Option(
         "quick_prompt_injection", "--campaign", "-c", help="Campaign name or YAML path"
     ),
-    output: str = typer.Option("reports", "--output", "-o", help="Output directory for reports"),
+    output: Path = typer.Option(Path("reports"), "--output", "-o", help="Report directory"),
+    report_format: str = typer.Option("html,json", "--format", "-f", help=FORMAT_HELP),
     no_mutations: bool = typer.Option(False, "--no-mutations", help="Disable payload mutations"),
-    report_format: str = typer.Option(
-        "html", "--format", "-f", help="Report format (html, json, both)"
+    auth_token: str | None = typer.Option(
+        None,
+        "--auth-token",
+        envvar="REDCLAW_AUTH_TOKEN",
+        help="Bearer token / API key for the target (env: REDCLAW_AUTH_TOKEN)",
+        show_default=False,
+    ),
+    insecure: bool = typer.Option(
+        False, "--insecure", help="Skip TLS certificate verification for the target"
+    ),
+    timeout: int = typer.Option(30, "--timeout", min=1, help="Per-request timeout (seconds)"),
+    model: str | None = typer.Option(
+        None,
+        "--model",
+        help="Model for claude_api (or 'default'/'heavy'/'fast') and OpenAI-compatible targets",
+    ),
+    system_prompt: str | None = typer.Option(
+        None, "--system-prompt", help="System prompt for the claude_api adapter"
+    ),
+    mcp_tool: str | None = typer.Option(
+        None, "--mcp-tool", help="MCP tool to send payloads to (default: first listed tool)"
+    ),
+    canary: bool = typer.Option(
+        True, "--canary/--no-canary", help="Run the loopback canary server for exfil detection"
+    ),
+    fail_on_findings: bool = typer.Option(
+        False, "--fail-on-findings", help=f"Exit {EXIT_FINDINGS} if any attack succeeded"
     ),
 ) -> None:
     """Run an adversarial scan against a target AI agent."""
-    asyncio.run(_run_scan(target, adapter, campaign, output, no_mutations, report_format))
+    from pydantic import SecretStr
 
-
-async def _run_scan(
-    target: str,
-    adapter: str,
-    campaign_name: str,
-    output: str,
-    no_mutations: bool,
-    report_format: str,
-) -> None:
-    """Async scan implementation."""
-    from redclaw.config import AdapterType, TargetConfig
-    from redclaw.core.engine import CampaignEngine
-    from redclaw.scoring.engine import ScoringEngine
-
-    console.print("\n[bold red]RedClaw[/bold red] — Adversarial AI Agent Red Team Framework\n")
-
-    # Load campaign — unknown names are an error, never a silent default.
     from redclaw.campaigns import CampaignLoadError, CampaignNotFoundError, resolve_campaign
+    from redclaw.config import AdapterType, RedClawSettings, TargetConfig
+    from redclaw.reporting.generator import parse_formats
 
     try:
-        campaign_config = resolve_campaign(campaign_name)
-    except (CampaignNotFoundError, CampaignLoadError) as exc:
-        console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(1) from None
-    console.print(f"  Campaign: [cyan]{campaign_config.name}[/cyan]")
+        formats = parse_formats(report_format)
+        adapter_type = AdapterType(adapter)
+    except ValueError as exc:
+        console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(EXIT_USAGE) from None
 
+    try:
+        campaign_config = resolve_campaign(campaign)
+    except (CampaignNotFoundError, CampaignLoadError) as exc:
+        console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(EXIT_USAGE) from None
     if no_mutations:
         campaign_config.payload_mutations = False
 
-    # Build target config
+    settings = RedClawSettings()
+    if not canary:
+        settings.canary_enabled = False
+
     target_config = TargetConfig(
         url=target,
-        adapter=AdapterType(adapter),
+        adapter=adapter_type,
+        auth_token=SecretStr(auth_token) if auth_token else None,
+        verify_ssl=not insecure,
+        timeout_seconds=timeout,
+        model=model,
+        system_prompt=system_prompt,
+        mcp_tool=mcp_tool,
     )
-    console.print(f"  Target:   [cyan]{target}[/cyan]")
-    console.print(f"  Adapter:  [cyan]{adapter}[/cyan]")
-    console.print()
 
-    # Run campaign
-    engine = CampaignEngine(target_config, campaign_config)
+    code = asyncio.run(
+        _run_scan(target_config, campaign_config, settings, output, formats, fail_on_findings)
+    )
+    raise typer.Exit(code)
 
+
+async def _run_scan(
+    target_config: Any,
+    campaign_config: Any,
+    settings: Any,
+    output: Path,
+    formats: list[Any],
+    fail_on_findings: bool,
+) -> int:
+    from redclaw.core.engine import CampaignEngine
+    from redclaw.reporting.generator import ReportGenerator
+    from redclaw.scoring.engine import ScoringEngine
+
+    console.print("\n[bold]RedClaw[/bold] — Adversarial AI Agent Red Team Framework\n")
+    console.print(f"  Campaign: [cyan]{escape(campaign_config.name)}[/cyan]")
+    console.print(f"  Target:   [cyan]{escape(target_config.url)}[/cyan]")
+    console.print(f"  Adapter:  [cyan]{target_config.adapter.value}[/cyan]\n")
+
+    engine = CampaignEngine(target_config, campaign_config, settings=settings)
     with console.status("[bold green]Running adversarial campaign..."):
         result = await engine.run()
 
-    # Score results
-    scorer = ScoringEngine()
-    score = scorer.score(result.all_results)
-
-    # Display results summary
+    score = ScoringEngine(settings.scoring_weights).score(result.all_results)
     _display_results(result, score)
 
-    # Generate report
-    output_dir = Path(output)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    from redclaw.reporting.generator import ReportGenerator
-
-    generator = ReportGenerator(output_dir=output_dir)
-
-    if report_format in ("html", "both"):
-        html_path = generator.generate_html(result, score)
-        console.print(f"\n  HTML report: [link=file://{html_path}]{html_path}[/link]")
-
-    if report_format in ("json", "both"):
-        json_path = generator.generate_json(result, score)
-        console.print(f"  JSON report: [link=file://{json_path}]{json_path}[/link]")
-
+    secrets = [
+        s.get_secret_value()
+        for s in (target_config.auth_token, target_config.auth_header, settings.anthropic_api_key)
+        if s is not None
+    ]
+    generator = ReportGenerator(output_dir=output, report_config=settings.report, secrets=secrets)
+    paths = generator.generate(result, score, formats)
+    console.print()
+    for fmt, path in paths.items():
+        console.print(f"  {fmt.value.upper():5} report: {escape(str(path))}")
     console.print()
 
+    if result.metadata.get("error"):
+        console.print(f"[red]Engine error:[/red] {escape(str(result.metadata['error']))}")
     if not score.get("tested"):
         console.print(
             "[bold red]Scan inconclusive:[/bold red] every attack errored or was skipped. "
             "Check the target URL, adapter and credentials."
         )
-        raise typer.Exit(2)
+        return EXIT_INCONCLUSIVE
+    if fail_on_findings and score.get("total_succeeded", 0) > 0:
+        return EXIT_FINDINGS
+    return EXIT_OK
 
 
-def _display_results(result, score) -> None:
-    """Display campaign results in a rich table."""
-    console.print()
-
-    # Score card
-    grade_color = {
-        "A": "green",
-        "B": "blue",
-        "C": "yellow",
-        "D": "red",
-        "F": "bold red",
-    }.get(score["grade"], "white")
-
+def _display_results(result: Any, score: dict[str, Any]) -> None:
+    """Display campaign results in rich tables."""
+    grade_color = {"A": "green", "B": "blue", "C": "yellow", "D": "red", "F": "bold red"}.get(
+        score["grade"], "white"
+    )
     if score["overall_score"] is None:
         console.print(
             "  Resilience Score: [bold yellow]not tested[/bold yellow] — no attack reached "
@@ -145,127 +218,88 @@ def _display_results(result, score) -> None:
     console.print(f"  Succeeded: [red]{result.successful_attacks}[/red]")
     console.print(f"  Defended: [green]{result.defended_attacks}[/green]")
     console.print(f"  Errors: [yellow]{score.get('total_errors', 0)}[/yellow]")
-    console.print(f"  Duration: {result.duration_seconds:.1f}s")
+    if result.metadata.get("out_of_band_hits"):
+        console.print(
+            f"  Out-of-band canary hits: [red]{result.metadata['out_of_band_hits']}[/red]"
+        )
+    console.print(f"  Duration: {result.duration_seconds:.1f}s\n")
 
-    # Dimension breakdown
-    console.print()
     table = Table(title="Resilience Dimensions", show_lines=True)
     table.add_column("Dimension", style="cyan")
     table.add_column("Score", justify="right")
     table.add_column("Weight", justify="right")
-    table.add_column("Attacks", justify="right")
-
+    table.add_column("Evaluated", justify="right")
+    table.add_column("Errors", justify="right")
     for dim in score.get("dimensions", []):
         if dim["score"] is None:
             label = "all errored" if dim.get("errors") else "not tested"
-            table.add_row(dim["name"], f"[dim]{label}[/dim]", f"{dim['weight']:.0%}", "0")
+            score_cell = f"[dim]{label}[/dim]"
         else:
-            score_color = (
-                "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
-            )
-            table.add_row(
-                dim["name"],
-                f"[{score_color}]{dim['score']:.0f}[/{score_color}]",
-                f"{dim['weight']:.0%}",
-                str(dim["attacks"]),
-            )
-
+            color = "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
+            score_cell = f"[{color}]{dim['score']:.0f}[/{color}]"
+        table.add_row(
+            dim["name"],
+            score_cell,
+            f"{dim['weight']:.0%}",
+            str(dim["attacks"]),
+            str(dim.get("errors", 0)),
+        )
     console.print(table)
 
-    # Critical findings
-    critical_results = [
+    critical = [
         r for r in result.all_results if r.succeeded and r.severity.value in ("CRITICAL", "HIGH")
     ]
-    if critical_results:
-        console.print()
+    if critical:
+        from redclaw.reporting.redaction import redact
+
         findings_table = Table(title="Critical Findings", show_lines=True)
-        findings_table.add_column("AATCK ID", style="red")
-        findings_table.add_column("Technique")
+        findings_table.add_column("Technique", style="red")
+        findings_table.add_column("Name")
         findings_table.add_column("Severity")
         findings_table.add_column("Evidence", max_width=60)
-
-        for r in critical_results[:10]:
-            sev_color = "bold red" if r.severity.value == "CRITICAL" else "yellow"
+        for r in critical[:10]:
             findings_table.add_row(
                 r.technique_id,
-                r.technique_name,
-                f"[{sev_color}]{r.severity.value}[/{sev_color}]",
-                r.evidence[:60],
+                escape(r.technique_name),
+                r.severity.value,
+                escape(redact(r.evidence)[:60]),
             )
-
+        console.print()
         console.print(findings_table)
 
 
 @app.command()
 def report(
-    input_file: str = typer.Option(
-        "reports/latest.json", "--input", "-i", help="Input JSON results"
+    input_file: Path = typer.Option(
+        Path("reports/latest.json"), "--input", "-i", help="JSON report from a previous scan"
     ),
-    output: str = typer.Option("reports", "--output", "-o", help="Output directory"),
-    report_format: str = typer.Option("html", "--format", "-f", help="Report format (html, json)"),
+    output: Path = typer.Option(Path("reports"), "--output", "-o", help="Output directory"),
+    report_format: str = typer.Option("html", "--format", "-f", help=FORMAT_HELP),
 ) -> None:
-    """Generate a report from previous scan results."""
-    import json
-    from dataclasses import dataclass, field
+    """Re-render a saved JSON report as HTML, SARIF, JUnit or JSON."""
+    from redclaw.reporting.document import validate_document
+    from redclaw.reporting.generator import ReportGenerator, parse_formats
 
-    from redclaw.attacks.base import AttackResult, AttackStatus, Severity
-    from redclaw.reporting.generator import ReportGenerator
+    try:
+        formats = parse_formats(report_format)
+    except ValueError as exc:
+        console.print(f"[red]Error:[/red] {escape(str(exc))}")
+        raise typer.Exit(EXIT_USAGE) from None
 
-    console.print("[bold red]RedClaw[/bold red] — Report Generator\n")
+    if not input_file.is_file():
+        console.print(f"[red]Error:[/red] {escape(str(input_file))} not found.")
+        raise typer.Exit(EXIT_USAGE)
 
-    input_path = Path(input_file)
-    if not input_path.exists():
-        console.print(f"  [red]Error: {input_file} not found.[/red]")
-        raise typer.Exit(1)
+    try:
+        doc = validate_document(json.loads(input_file.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, ValueError) as exc:
+        console.print(f"[red]Error:[/red] {escape(str(input_file))}: {escape(str(exc))}")
+        raise typer.Exit(EXIT_USAGE) from None
 
-    console.print(f"  Input: {input_path}")
-
-    data = json.loads(input_path.read_text(encoding="utf-8"))
-    meta = data.get("meta", {})
-    score = data.get("score", {})
-
-    # Reconstruct AttackResult objects from JSON findings
-    results: list[AttackResult] = []
-    for f in data.get("findings", []):
-        results.append(
-            AttackResult(
-                attack_id=f.get("attack_id", ""),
-                module_name=f.get("module", ""),
-                aatck_id=f.get("aatck_id", ""),
-                technique_id=f.get("technique_id", ""),
-                technique_name=f.get("technique_name", ""),
-                status=AttackStatus(f.get("status", "defended")),
-                severity=Severity(f.get("severity", "MEDIUM")),
-                confidence=f.get("confidence", 0.0),
-                canary_detected=f.get("canary_detected", False),
-                evidence=f.get("evidence", ""),
-                remediation=f.get("remediation", ""),
-                payload_used=f.get("payload", ""),
-            )
-        )
-
-    # Lightweight stand-in for CampaignResult
-    @dataclass
-    class _LoadedResult:
-        campaign_name: str
-        target_url: str
-        adapter_type: str
-        duration_seconds: float
-        all_results: list[AttackResult] = field(default_factory=list)
-
-    loaded = _LoadedResult(
-        campaign_name=meta.get("campaign", "unknown"),
-        target_url=meta.get("target", "unknown"),
-        adapter_type=meta.get("adapter", "unknown"),
-        duration_seconds=meta.get("duration_seconds", 0.0),
-        all_results=results,
-    )
-
-    output_dir = Path(output)
-    generator = ReportGenerator(output_dir=output_dir)
-    html_path = generator.generate_html(loaded, score)
-    console.print(f"  HTML report: [link=file://{html_path}]{html_path}[/link]")
-    console.print("  [green]Done.[/green]")
+    generator = ReportGenerator(output_dir=output)
+    for fmt in formats:
+        path = generator.write(doc, fmt)
+        console.print(f"  {fmt.value.upper():5} report: {escape(str(path))}")
 
 
 @campaigns_app.command("list")
@@ -278,10 +312,8 @@ def campaigns_list() -> None:
     table.add_column("Name")
     table.add_column("Source")
     table.add_column("Description", max_width=50)
-
     for info in list_campaigns():
-        table.add_row(info.key, info.name, info.source, info.description[:50])
-
+        table.add_row(info.key, escape(info.name), escape(info.source), escape(info.description))
     console.print(table)
 
 
@@ -295,10 +327,8 @@ def attacks_list() -> None:
     table.add_column("Name")
     table.add_column("AATCK IDs", style="red")
     table.add_column("Description", max_width=50)
-
     for mod in list_modules():
-        table.add_row(mod["id"], mod["name"], mod["aatck_ids"], mod["description"][:50])
-
+        table.add_row(mod["id"], mod["name"], mod["aatck_ids"], mod["description"])
     console.print(table)
 
 
@@ -307,13 +337,21 @@ def dashboard(
     port: int = typer.Option(8200, "--port", "-p", help="Dashboard port"),
     reports_dir: str = typer.Option("reports", "--reports", "-r", help="Reports directory"),
 ) -> None:
-    """Start the RedClaw results dashboard."""
-    console.print("\n[bold red]RedClaw[/bold red] Dashboard")
-    console.print(f"  URL: [link=http://127.0.0.1:{port}]http://127.0.0.1:{port}[/link]")
-    console.print(f"  Reports: {reports_dir}\n")
+    """Start the results dashboard (needs the 'dashboard' extra)."""
+    try:
+        import uvicorn  # noqa: F401
 
-    from redclaw.reporting.dashboard import run_dashboard
+        from redclaw.reporting.dashboard import run_dashboard
+    except ImportError:
+        console.print(
+            "[red]Error:[/red] the dashboard needs extra packages: "
+            "pip install 'redclaw\\[dashboard]'"
+        )
+        raise typer.Exit(EXIT_USAGE) from None
 
+    console.print("\n[bold]RedClaw[/bold] Dashboard")
+    console.print(f"  URL: http://127.0.0.1:{port}")
+    console.print(f"  Reports: {escape(reports_dir)}\n")
     run_dashboard(port=port, reports_dir=reports_dir)
 
 

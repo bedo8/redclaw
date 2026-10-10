@@ -26,7 +26,7 @@ EXPECTED_BUILTINS = {
 
 
 def test_builtins_are_package_resources() -> None:
-    assert EXPECTED_BUILTINS <= set(builtin_campaign_names())
+    assert set(builtin_campaign_names()) >= EXPECTED_BUILTINS
 
 
 @pytest.mark.parametrize("name", sorted(EXPECTED_BUILTINS))
