@@ -100,7 +100,8 @@ class ReportGenerator:
     def _build_html(self, result, score: dict[str, Any]) -> str:
         """Build the full HTML report string."""
         grade = score["grade"]
-        overall = score["overall_score"]
+        overall_value = score.get("overall_score")
+        overall = "not tested" if overall_value is None else f"{overall_value:.0f} / 100"
 
         grade_color = {
             "A": "#2DD4BF",
@@ -267,7 +268,7 @@ class ReportGenerator:
 
 <div class="score-card">
   <div class="grade" style="color:{grade_color}">{grade}</div>
-  <div class="score-num">{overall:.0f} / 100</div>
+  <div class="score-num">{overall}</div>
   <div class="meta-row">
     <div>Target: <span>{_escape(result.target_url)}</span></div>
     <div>Adapter: <span>{result.adapter_type}</span></div>

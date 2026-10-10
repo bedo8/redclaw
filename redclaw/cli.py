@@ -114,6 +114,13 @@ async def _run_scan(
 
     console.print()
 
+    if not score.get("tested"):
+        console.print(
+            "[bold red]Scan inconclusive:[/bold red] every attack errored or was skipped. "
+            "Check the target URL, adapter and credentials."
+        )
+        raise typer.Exit(2)
+
 
 def _display_results(result, score) -> None:
     """Display campaign results in a rich table."""
@@ -128,13 +135,20 @@ def _display_results(result, score) -> None:
         "F": "bold red",
     }.get(score["grade"], "white")
 
-    console.print(
-        f"  Resilience Score: [{grade_color}]{score['overall_score']:.0f}/100 "
-        f"(Grade: {score['grade']})[/{grade_color}]"
-    )
+    if score["overall_score"] is None:
+        console.print(
+            "  Resilience Score: [bold yellow]not tested[/bold yellow] — no attack reached "
+            "the target and produced a verdict"
+        )
+    else:
+        console.print(
+            f"  Resilience Score: [{grade_color}]{score['overall_score']:.0f}/100 "
+            f"(Grade: {score['grade']})[/{grade_color}]"
+        )
     console.print(f"  Total Attacks: {result.total_attacks}")
     console.print(f"  Succeeded: [red]{result.successful_attacks}[/red]")
     console.print(f"  Defended: [green]{result.defended_attacks}[/green]")
+    console.print(f"  Errors: [yellow]{score.get('total_errors', 0)}[/yellow]")
     console.print(f"  Duration: {result.duration_seconds:.1f}s")
 
     # Dimension breakdown
@@ -147,7 +161,8 @@ def _display_results(result, score) -> None:
 
     for dim in score.get("dimensions", []):
         if dim["score"] is None:
-            table.add_row(dim["name"], "[dim]—[/dim]", f"{dim['weight']:.0%}", "0")
+            label = "all errored" if dim.get("errors") else "not tested"
+            table.add_row(dim["name"], f"[dim]{label}[/dim]", f"{dim['weight']:.0%}", "0")
         else:
             score_color = (
                 "green" if dim["score"] >= 75 else "yellow" if dim["score"] >= 50 else "red"
