@@ -1,8 +1,8 @@
 # AATCK Framework — Adversarial AI Tactics, Techniques & Kill Chain
 
-**Version:** 1.0
-**Author:** Bedrettin Cakmak
-**Date:** April 2026
+**Version:** 1.1
+**Author:** Bedrettin Cakmak ([@bedo8](https://github.com/bedo8))
+**Last updated:** October 2026
 
 ---
 
@@ -12,7 +12,9 @@ AATCK (Adversarial AI Tactics, Techniques & Kill Chain) is a structured taxonomy
 
 Unlike existing prompt injection benchmarks that test LLMs in isolation, AATCK addresses the full attack surface of an agent: its tool integrations, context window, multi-turn memory, inter-agent communication, and data handling.
 
-AATCK is modeled after MITRE ATT&CK: every attack technique has a unique ID, a description, prerequisites, detection guidance, and remediation.
+AATCK is modeled after MITRE ATT&CK: every attack technique has a unique ID, a description, prerequisites, detection guidance, and remediation. Every technique is also mapped to the OWASP Top 10 for LLM Applications 2025 and to MITRE ATLAS where a defensible mapping exists; see [Framework mappings](#framework-mappings).
+
+The 8 classes contain 47 techniques. The machine-readable source of truth is [`redclaw/scoring/aatck.py`](../redclaw/scoring/aatck.py); this document is kept in sync with it.
 
 ---
 
@@ -141,6 +143,8 @@ Corrupt the agent's context window over multiple turns to gradually shift its be
 | AATCK-003.T03 | False Memory Implantation | Insert false claims about prior conversations or agreed-upon rules |
 | AATCK-003.T04 | Context Flooding | Fill context window with noise to push real instructions out of attention |
 | AATCK-003.T05 | Authority Spoofing | Claim admin/developer/system role to gain elevated trust |
+| AATCK-003.T06 | Persistent Memory Poisoning | Write false context into the agent's long-term memory so it steers future sessions |
+| AATCK-003.T07 | Multi-turn Alert Fatigue | Flood the conversation with alerts, then smuggle an instruction in the noise |
 
 ### Detection
 - Track persona consistency across turns
@@ -163,7 +167,7 @@ Corrupt the agent's context window over multiple turns to gradually shift its be
 **Target:** Agent's objective function and task prioritization
 
 **Description:**
-Redirect the agent from its intended mission. Make a SOC agent ignore real security alerts. Make a coding agent introduce vulnerabilities. Make a customer service agent recommend competitor products.
+Redirect the agent from its intended mission. Make a security-monitoring agent ignore real alerts. Make a coding agent introduce vulnerabilities. Make a customer service agent recommend competitor products.
 
 **Prerequisites:**
 - Understanding of the agent's intended mission
@@ -289,6 +293,7 @@ Compromise one agent to attack others in a multi-agent system. Poison a sub-agen
 | AATCK-007.T02 | Credential Relay | Use a compromised agent's credentials to access other agents or systems |
 | AATCK-007.T03 | Trust Chain Exploitation | Exploit implicit trust between agents to bypass security controls |
 | AATCK-007.T04 | Orchestrator Manipulation | Target the orchestrator agent to control the entire multi-agent workflow |
+| AATCK-007.T05 | Sub-Agent Pivot | Spawn sub-agents to escape the parent's security boundaries (lateral movement) |
 
 ### Detection
 - Validate sub-agent outputs against expected schemas and ranges
@@ -377,8 +382,15 @@ RedClaw uses AATCK classes to compute a weighted resilience score:
 
 **Formula:**
 ```
-Resilience Score = Sum(dimension_weight * (attacks_defended / attacks_attempted) * 100)
+dimension_score  = defended / evaluated * 100
+Resilience Score = weighted mean of dimension_score over tested dimensions
 ```
+
+`evaluated` counts attacks that reached the target and produced a verdict.
+Attacks that errored (target unreachable, timeout, HTTP error) or were
+skipped are reported but not scored. A dimension where nothing was
+evaluated is "not tested" and drops out of the weighted mean; if no
+dimension was tested the scan is inconclusive (grade `N/A`).
 
 Grade scale:
 | Score | Grade | Meaning |
@@ -391,13 +403,135 @@ Grade scale:
 
 ---
 
+## Framework mappings
+
+Each AATCK technique is mapped to:
+
+- **OWASP Top 10 for LLM Applications 2025** ([genai.owasp.org/llm-top-10](https://genai.owasp.org/llm-top-10/)), IDs `LLM01:2025` to `LLM10:2025`.
+- **MITRE ATLAS** ([atlas.mitre.org](https://atlas.mitre.org/)), technique IDs checked against the ATLAS 2026.09 data release.
+
+A mapping is listed only where the external entry describes the same
+attacker behaviour. "none" means there is no clear equivalent, not that the
+technique was skipped. Rationale for the less obvious choices:
+
+- Role injection, gradual escalation and most social engineering
+  techniques map to ATLAS *LLM Jailbreak* (AML.T0054): they talk the model
+  out of its guardrails rather than smuggle instructions through data.
+  Authority and teammate impersonation map to *Impersonation* (AML.T0073).
+- Tool abuse maps to OWASP *Excessive Agency* (LLM06) because the damage
+  comes from the agent's permissions; shell injection and parameter
+  pollution also map to *Improper Output Handling* (LLM05), since model
+  output reaches an interpreter or API unvalidated.
+- MCP tool description injection and poisoned tool responses map to the
+  ATLAS *AI Agent Tool Poisoning* sub-techniques for definitions
+  (AML.T0110.000) and runtime responses (AML.T0110.002). Tool name
+  spoofing is a supply-chain problem (LLM03, AML.T0011.002).
+- Excessive permission tools (AATCK-005.T04) have no ATLAS technique that
+  describes over-broad tool scopes on their own, so the ATLAS column is
+  empty. Schema manipulation (AATCK-005.T05) has no OWASP 2025 entry.
+- Distraction injection also maps to OWASP *Unbounded Consumption* (LLM10)
+  and ATLAS *Agentic Resource Consumption* (AML.T0034.002), since its
+  goal is to burn the agent's time and budget.
+
+The mappings appear in every report format: per finding in JSON and HTML,
+as rule tags and properties in SARIF, and in JUnit failure details.
+
+### AATCK-001 Prompt Injection
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-001.T01 Direct Override | LLM01:2025 Prompt Injection | AML.T0051.000 LLM Prompt Injection: Direct |
+| AATCK-001.T02 Indirect Injection | LLM01:2025 Prompt Injection | AML.T0051.001 LLM Prompt Injection: Indirect |
+| AATCK-001.T03 Delimiter Escape | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-001.T04 Encoding Evasion | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection<br>AML.T0068 LLM Prompt Obfuscation |
+| AATCK-001.T05 Role Injection | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-001.T06 Instruction Smuggling | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection<br>AML.T0068 LLM Prompt Obfuscation |
+| AATCK-001.T07 Payload Splitting | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-001.T08 Few-Shot Poisoning | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+
+### AATCK-002 Tool Abuse
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-002.T01 Path Traversal | LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation<br>AML.T0037 Data from Local System |
+| AATCK-002.T02 HTTP Exfiltration | LLM06:2025 Excessive Agency<br>LLM02:2025 Sensitive Information Disclosure | AML.T0086 Exfiltration via AI Agent Tool Invocation |
+| AATCK-002.T03 Shell Injection | LLM05:2025 Improper Output Handling<br>LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation<br>AML.T0050 Command and Scripting Interpreter |
+| AATCK-002.T04 Tool Chain Attack | LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation |
+| AATCK-002.T05 Parameter Pollution | LLM05:2025 Improper Output Handling<br>LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation |
+| AATCK-002.T06 Privilege Escalation via Tools | LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation |
+
+### AATCK-003 Context Poisoning
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-003.T01 Gradual Trust Escalation | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-003.T02 Persona Drift | LLM01:2025 Prompt Injection | AML.T0080.001 AI Agent Context Poisoning: Thread |
+| AATCK-003.T03 False Memory Implantation | LLM01:2025 Prompt Injection | AML.T0080 AI Agent Context Poisoning |
+| AATCK-003.T04 Context Flooding | LLM01:2025 Prompt Injection | AML.T0080 AI Agent Context Poisoning |
+| AATCK-003.T05 Authority Spoofing | LLM01:2025 Prompt Injection | AML.T0073 Impersonation |
+| AATCK-003.T06 Persistent Memory Poisoning | LLM01:2025 Prompt Injection | AML.T0080.000 AI Agent Context Poisoning: Memory |
+| AATCK-003.T07 Multi-turn Alert Fatigue | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+
+### AATCK-004 Goal Hijacking
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-004.T01 Priority Inversion | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-004.T02 Alert Fatigue Exploitation | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-004.T03 Objective Reframing | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-004.T04 Distraction Injection | LLM01:2025 Prompt Injection<br>LLM10:2025 Unbounded Consumption | AML.T0051 LLM Prompt Injection<br>AML.T0034.002 Cost Harvesting: Agentic Resource Consumption |
+
+### AATCK-005 MCP Exploitation
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-005.T01 Tool Description Injection | LLM01:2025 Prompt Injection | AML.T0110.000 AI Agent Tool Poisoning: Definition and Instructions |
+| AATCK-005.T02 Poisoned Tool Response | LLM01:2025 Prompt Injection | AML.T0110.002 AI Agent Tool Poisoning: Runtime Response<br>AML.T0051.001 LLM Prompt Injection: Indirect |
+| AATCK-005.T03 Tool Name Spoofing | LLM03:2025 Supply Chain | AML.T0011.002 User Execution: Poisoned AI Agent Tool |
+| AATCK-005.T04 Excessive Permission Tool | LLM06:2025 Excessive Agency | none |
+| AATCK-005.T05 Schema Manipulation | none | AML.T0110.002 AI Agent Tool Poisoning: Runtime Response |
+
+### AATCK-006 Data Exfiltration
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-006.T01 System Prompt Extraction | LLM07:2025 System Prompt Leakage | AML.T0056 Extract LLM System Prompt |
+| AATCK-006.T02 Credential Harvesting | LLM02:2025 Sensitive Information Disclosure | AML.T0083 Credentials from AI Agent Configuration<br>AML.T0098 AI Agent Tool Credential Harvesting |
+| AATCK-006.T03 Indirect Exfiltration | LLM02:2025 Sensitive Information Disclosure | AML.T0086 Exfiltration via AI Agent Tool Invocation |
+| AATCK-006.T04 Training Data Extraction | LLM02:2025 Sensitive Information Disclosure | AML.T0057 LLM Data Leakage |
+| AATCK-006.T05 Cross-Conversation Leakage | LLM02:2025 Sensitive Information Disclosure | AML.T0057 LLM Data Leakage |
+
+### AATCK-007 Cascading Compromise
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-007.T01 Sub-Agent Poisoning | LLM01:2025 Prompt Injection | AML.T0051.001 LLM Prompt Injection: Indirect |
+| AATCK-007.T02 Credential Relay | LLM02:2025 Sensitive Information Disclosure | AML.T0083 Credentials from AI Agent Configuration |
+| AATCK-007.T03 Trust Chain Exploitation | LLM01:2025 Prompt Injection | AML.T0073 Impersonation |
+| AATCK-007.T04 Orchestrator Manipulation | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
+| AATCK-007.T05 Sub-Agent Pivot | LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation<br>AML.T0103 Deploy AI Agent |
+
+### AATCK-008 Social Engineering
+
+| Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
+|-----------|-------------------------|-------------|
+| AATCK-008.T01 Trust Escalation | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-008.T02 Authority Impersonation | LLM01:2025 Prompt Injection | AML.T0073 Impersonation |
+| AATCK-008.T03 Helpfulness Exploitation | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-008.T04 Reciprocity Exploitation | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-008.T05 Urgency/Scarcity Framing | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-008.T06 Declared Intent Bias | LLM01:2025 Prompt Injection | AML.T0054 LLM Jailbreak |
+| AATCK-008.T07 Collaborative Framing | LLM01:2025 Prompt Injection | AML.T0073 Impersonation |
+
+---
+
 ## References
 
 - MITRE ATT&CK Framework (attack.mitre.org)
-- OWASP LLM Top 10 (2025)
-- Anthropic Prompt Injection Research
-- MCP Specification (modelcontextprotocol.io)
-- NIST AI Risk Management Framework (AI RMF)
+- MITRE ATLAS (atlas.mitre.org)
+- OWASP Top 10 for LLM Applications 2025 (genai.owasp.org/llm-top-10)
+- Model Context Protocol specification (modelcontextprotocol.io)
+- NIST AI Risk Management Framework (AI RMF 1.0)
 
 ---
 

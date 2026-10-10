@@ -1,5 +1,9 @@
 # AATCK: A MITRE ATT&CK-Style Framework for AI Agent Security
 
+> Originally published April 2026. Since then RedClaw has gained SARIF/JUnit
+> output and OWASP LLM Top 10 (2025) / MITRE ATLAS mappings for every
+> technique; see the [README](../README.md) for current capabilities.
+
 *By Bedrettin Cakmak*
 
 ---
@@ -149,9 +153,9 @@ A taxonomy without validation is academic. So I built RedClaw — a red team too
 
 **Deterministic scoring** across 8 weighted dimensions: Prompt Injection (20%), Tool Abuse (18%), Data Protection (15%), Context Integrity (12%), Goal Integrity (10%), MCP Security (10%), Multi-Agent Isolation (8%), Social Engineering (7%). No LLM in the scoring loop. Final score maps to a letter grade — A through F.
 
-**4 adapters** so it connects to whatever you're running: generic HTTP agents, OpenClaw agents (with Ed25519 WebSocket auth), MCP servers (stdio and SSE), and Claude API-compatible agents.
+**4 adapters** so it connects to whatever you're running: generic HTTP agents, OpenClaw agents (with Ed25519 WebSocket auth), MCP servers (stdio and Streamable HTTP), and Claude API-compatible agents.
 
-**4 pre-built campaigns**: Quick Prompt Injection scan (50 attacks), Full SOC Assessment (7 phases, all 8 classes, up to 500 attacks), MCP Security Audit (3 phases, 100 attacks), and OpenClaw Pentest (7 phases, 200 attacks).
+**4 pre-built campaigns**: Quick Prompt Injection scan (50 attacks), Full Agent Assessment (7 phases, all 8 classes, up to 500 attacks), MCP Security Audit (3 phases, 100 attacks), and OpenClaw Pentest (7 phases, 200 attacks).
 
 It also ships with a deliberately vulnerable mock agent, a mock MCP server with 4 attack modes, and a canary HTTP server for detecting exfiltration — all loopback-only for safe testing.
 
@@ -165,4 +169,4 @@ This is v1 and it'll get things wrong. Agent architectures are evolving fast and
 
 ---
 
-*Bedo is a security professional focused on AI governance, GRC, and adversarial security testing for enterprise AI systems. CISSP, CRISC.*
+*Bedrettin Cakmak works on AI governance and adversarial security testing for AI systems. RedClaw is open source at [github.com/bedo8/redclaw](https://github.com/bedo8/redclaw).*

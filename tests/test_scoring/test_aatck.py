@@ -61,3 +61,47 @@ def test_get_technique_not_found():
 def test_total_technique_count():
     """Verify we have a good coverage of techniques."""
     assert len(ALL_TECHNIQUES) >= 30, f"Only {len(ALL_TECHNIQUES)} techniques total"
+
+
+# --- Framework mappings ---------------------------------------------------------
+
+
+def test_every_technique_has_valid_mappings() -> None:
+    from redclaw.scoring.aatck import (
+        ALL_TECHNIQUES,
+        MITRE_ATLAS_TECHNIQUES,
+        OWASP_LLM_TOP10_2025,
+    )
+
+    assert len(ALL_TECHNIQUES) == 47
+    for tech in ALL_TECHNIQUES.values():
+        assert tech.owasp_llm or tech.atlas, tech.id
+        for oid in tech.owasp_llm:
+            assert oid in OWASP_LLM_TOP10_2025, (tech.id, oid)
+        for aid in tech.atlas:
+            assert aid in MITRE_ATLAS_TECHNIQUES, (tech.id, aid)
+            assert aid.startswith("AML.T"), aid
+
+
+def test_framework_mappings_helper() -> None:
+    from redclaw.scoring.aatck import framework_mappings
+
+    assert framework_mappings("AATCK-006.T01") == {
+        "owasp_llm": ["LLM07:2025"],
+        "mitre_atlas": ["AML.T0056"],
+    }
+    assert framework_mappings("NOPE") == {"owasp_llm": [], "mitre_atlas": []}
+
+
+def test_framework_doc_matches_code() -> None:
+    """docs/AATCK_FRAMEWORK.md lists every technique with the same mappings."""
+    from pathlib import Path
+
+    from redclaw.scoring.aatck import ALL_TECHNIQUES
+
+    doc = (Path(__file__).parents[2] / "docs" / "AATCK_FRAMEWORK.md").read_text(encoding="utf-8")
+    for tech in ALL_TECHNIQUES.values():
+        rows = [ln for ln in doc.splitlines() if ln.startswith(f"| {tech.id} {tech.name} |")]
+        assert rows, f"{tech.id} missing from mapping table"
+        for ref in (*tech.owasp_llm, *tech.atlas):
+            assert ref in rows[0], (tech.id, ref)

@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+.openclaw/
 
 # Python
 __pycache__/
@@ -38,8 +41,15 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Reports (contain generated data, regenerate locally)
+# Reports (may contain leaked target data; regenerate locally)
 reports/
+*.sarif
+*.junit.xml
+
+# Coverage / build output
+coverage.xml
+.uv-cache/
+wheelhouse/
 
 # Claude Code
 CLAUDE.md

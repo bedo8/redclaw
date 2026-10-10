@@ -1,71 +1,75 @@
 # Contributing to RedClaw
 
-Short reference for maintainers and contributors.
-
 ## Dev setup
 
 ```bash
 git clone https://github.com/bedo8/redclaw.git
 cd redclaw
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,openclaw]"
-pre-commit install
+pip install --require-hashes -r requirements.lock   # pinned, hash-checked
+pip install --no-deps -e .
+pre-commit install                                   # optional: pip install pre-commit
 ```
 
-## Quality gates (must pass locally before opening a PR)
+## Checks (CI runs the same)
 
 ```bash
 ruff check redclaw/ tests/
 ruff format --check redclaw/ tests/
 mypy redclaw/
-pytest   # enforces --cov-fail-under=45
+pytest                       # coverage gate: 80%
+pip-audit --require-hashes --disable-pip -r requirements.lock
 ```
 
-The CI matrix (`.github/workflows/test.yml`) runs the same commands on
-ubuntu + macos × py 3.11 / 3.12 / 3.13. Red CI blocks merge.
+The test suite starts loopback-only servers (the mock agent, a mock MCP
+server, a fake Messages API) and never talks to external hosts.
+
+`.github/workflows/test.yml` runs lint, types, pip-audit, the test matrix
+(ubuntu and macOS, Python 3.11 to 3.14) and an end-to-end scan of the
+bundled mock agent from a freshly built wheel.
+
+## Dependencies
+
+Ranges live in `pyproject.toml`; exact, hashed pins live in
+`requirements.lock`. After changing a range (or merging a Dependabot bump),
+regenerate the lock and audit it:
+
+```bash
+uv pip compile pyproject.toml --extra dashboard --extra openclaw --extra dev \
+  --universal --python-version 3.11 --generate-hashes -o requirements.lock
+pip-audit --require-hashes --disable-pip -r requirements.lock
+```
 
 ## Commit style
 
-Conventional-Commits-ish prefixes, already used throughout history:
-
-- `feat:` — new user-visible behavior
-- `fix:` — bug fix
-- `refactor:` — internal restructure, no behavior change
-- `test:` — tests only
-- `docs:` — docs only
-- `build:` / `ci:` — packaging or workflow changes
-- `security:` — dependency bumps to clear a CVE
-- `chore:` / `style:` — mechanical housekeeping
-
-Scope (the `(area)` in `feat(area): ...`) is optional — use it when the
-change is confined to one subsystem (e.g. `feat(api):`, `refactor(adapters):`).
+Conventional-commit prefixes: `feat:`, `fix:`, `refactor:`, `test:`,
+`docs:`, `build:`, `ci:`, `chore:`, `style:`. Add a scope when the change
+is confined to one area, e.g. `fix(adapters):`.
 
 ## Extension points
 
-If you're adding a new adapter, attack module, or AATCK class, follow
-[docs/extending.md](docs/extending.md) — no engine or CLI edits should be
-needed.
+New adapters, attack modules and AATCK classes plug into registries; see
+[docs/extending.md](docs/extending.md). If you add or change an AATCK
+technique, update its OWASP/ATLAS mappings in `redclaw/scoring/aatck.py`
+and the tables in `docs/AATCK_FRAMEWORK.md` (a test checks they agree).
 
-## PR checklist
+## Pull requests
 
-- [ ] Tests added or updated (coverage gate is 45%).
-- [ ] `pre-commit run --all-files` is clean.
-- [ ] `CHANGELOG.md` updated under `[Unreleased]` if the change is user-visible.
-- [ ] Relevant docs updated (README, `docs/extending.md`, `docs/AATCK_FRAMEWORK.md`).
+- Tests added or updated.
+- `pre-commit run --all-files` is clean.
+- `CHANGELOG.md` updated under `[Unreleased]` for user-visible changes.
+- Docs updated where relevant.
 
 ## Releases
 
-Releases are tag-driven. Do not hand-edit version numbers.
+Releases are tag-driven; the version comes from the git tag via
+setuptools-scm, so never hand-edit it.
 
 ```bash
 git tag -a v0.3.0 -m "v0.3.0"
 git push origin v0.3.0
 ```
 
-That triggers `.github/workflows/build.yml`, which builds sdist + wheel with
-setuptools-scm, runs `twine check`, and attaches the artifacts to the
-auto-created GitHub Release. Install is `pip install` from the release URL or
-`pip install git+https://github.com/bedo8/redclaw.git@v0.3.0`. No PyPI upload.
-
-Before tagging, promote the `[Unreleased]` section of `CHANGELOG.md` to a
-dated release heading.
+`.github/workflows/build.yml` builds the sdist and wheel, checks them, and
+attaches them to the GitHub Release. Move the `[Unreleased]` section of
+`CHANGELOG.md` under a dated heading before tagging.

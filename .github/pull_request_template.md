@@ -7,7 +7,7 @@
 
 ## Checklist
 
-- [ ] Tests added or updated (`pytest` passes, coverage gate ≥ 45%)
+- [ ] Tests added or updated (`pytest` passes, coverage gate 80%)
 - [ ] `ruff check` + `ruff format --check` clean
 - [ ] `mypy redclaw/` clean
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` if user-visible
@@ -15,4 +15,4 @@
 
 ## Linked issue / context
 
-<!-- "Closes #NN" or a link to the discussion / ticket / OpenClaw finding. -->
+<!-- "Closes #NN" or a link to the discussion. -->

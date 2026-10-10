@@ -1,168 +1,241 @@
 # RedClaw
 
-**Adversarial AI Agent Red Team Framework**
+**Adversarial red-team framework for AI agents.**
 
-RedClaw is an automated adversarial testing framework built to assess the security posture of AI agents. It targets the agent layer itself -- system prompts, tool integrations, MCP servers, context windows, and multi-agent orchestration -- using a structured attack taxonomy called AATCK (Adversarial AI Tactics, Techniques & Kill Chain). Where existing tools like Garak and PromptFoo test LLMs in isolation, RedClaw tests what happens when an agent has tools, memory, external access, and a mission.
+RedClaw attacks the agent layer: system prompts, tool use, MCP servers,
+multi-turn context and multi-agent hand-offs. It sends payloads from a
+structured taxonomy, AATCK (Adversarial AI Tactics, Techniques & Kill Chain),
+watches the agent's replies, tool calls and outbound requests for canary
+tokens, and turns the results into a deterministic resilience score.
 
-## The Problem
+Tools such as Garak and promptfoo focus on the model. RedClaw focuses on
+what an agent does once it has tools, memory and network access.
 
-AI agents that combine LLMs with tool use, MCP servers, and multi-agent coordination introduce attack surfaces that go well beyond prompt injection. Existing frameworks -- OWASP Top 10 for LLMs, MITRE ATLAS -- do not cover tool abuse chains, MCP server exploitation, context poisoning across turns, or cascading compromise in multi-agent systems. RedClaw fills that gap with a purpose-built taxonomy and automated scanning engine.
+> Only point RedClaw at agents you own or are authorized to test.
 
-## AATCK Framework
+## AATCK
 
-AATCK (Adversarial AI Tactics, Techniques & Kill Chain) is a structured taxonomy modeled after MITRE ATT&CK. Every attack technique has a unique ID, description, prerequisites, detection guidance, and remediation. The taxonomy defines 8 attack classes spanning the full agent attack surface:
+8 attack classes, 47 techniques. Every technique carries OWASP Top 10 for
+LLM Applications 2025 and MITRE ATLAS mappings where one is defensible.
 
-| ID | Class | What It Tests |
-|----|-------|---------------|
-| AATCK-001 | Prompt Injection | Instruction override via data channels -- direct, indirect, delimiter escape, encoding evasion, role injection |
-| AATCK-002 | Tool Abuse | Weaponization of agent tools -- path traversal, HTTP exfiltration, shell injection, tool chain attacks |
-| AATCK-003 | Context Poisoning | Context window manipulation -- gradual trust escalation, persona drift, false memory implantation |
-| AATCK-004 | Goal Hijacking | Mission redirection -- priority inversion, alert fatigue, objective reframing |
-| AATCK-005 | MCP Exploitation | MCP server attacks -- tool description injection, poisoned responses, tool name spoofing |
-| AATCK-006 | Data Exfiltration | Sensitive data extraction via agent responses -- system prompt leakage, API key extraction |
-| AATCK-007 | Cascading Compromise | Multi-agent attacks -- poisoning sub-agent outputs to mislead orchestrators |
-| AATCK-008 | Social Engineering | Conversational manipulation -- declared intent bias, authority impersonation, urgency framing, reciprocity exploitation |
+| ID | Class | What it tests | Main OWASP mapping |
+|----|-------|---------------|--------------------|
+| AATCK-001 | Prompt Injection | Direct and indirect instruction override, delimiter escape, encoding evasion, role injection | LLM01 |
+| AATCK-002 | Tool Abuse | Path traversal, HTTP exfiltration, shell injection, tool chains | LLM06, LLM05 |
+| AATCK-003 | Context Poisoning | Trust escalation, persona drift, false and persistent memories | LLM01 |
+| AATCK-004 | Goal Hijacking | Priority inversion, alert fatigue, objective reframing | LLM01 |
+| AATCK-005 | MCP Exploitation | Tool description injection, poisoned responses, tool spoofing | LLM01, LLM03 |
+| AATCK-006 | Data Exfiltration | System prompt and credential extraction, cross-session leakage | LLM07, LLM02 |
+| AATCK-007 | Cascading Compromise | Sub-agent poisoning, credential relay, orchestrator manipulation | LLM01, LLM06 |
+| AATCK-008 | Social Engineering | Authority impersonation, urgency, declared-intent bias | LLM01 |
 
-Full taxonomy with all techniques, detection guidance, and remediation: [`docs/AATCK_FRAMEWORK.md`](docs/AATCK_FRAMEWORK.md)
+Full taxonomy, detection guidance, remediation and the per-technique
+OWASP/ATLAS tables: [`docs/AATCK_FRAMEWORK.md`](docs/AATCK_FRAMEWORK.md).
 
-## Features
+## Quick start
 
-- **8 attack module classes** covering the full AATCK taxonomy, each with multiple techniques and payloads
-- **4 target adapters** -- HTTP, OpenClaw, MCP (stdio/SSE), Claude API -- test any agent regardless of interface
-- **Payload mutation engine** -- encoding evasion, delimiter escape, few-shot poisoning, instruction smuggling
-- **Deterministic scoring** -- canary-based detection, no LLM in the scoring loop, weighted 8-dimension resilience score with A-F grades
-- **Campaign system** -- define multi-phase attack sequences in YAML, ship with built-in campaigns or write your own
-- **HTML and JSON reporting** -- detailed findings with AATCK IDs, severity, evidence, and remediation
-- **Results dashboard** -- FastAPI-powered web UI for browsing scan results
-- **Mock services** -- built-in mock agent, mock MCP server, and canary server for development and CI testing
-- **Async engine** -- concurrent attack execution with campaign orchestration and scheduling
-
-## Quick Start
+Requires Python 3.11+.
 
 ```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
+git clone https://github.com/bedo8/redclaw.git
+cd redclaw
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dashboard]"
 
-# Start the mock agent for testing
+# 1. Start the deliberately vulnerable mock agent (loopback only)
 python -m redclaw.mock_services.mock_agent &
 
-# Run a prompt injection scan
+# 2. Scan it
 redclaw scan --target http://127.0.0.1:9999 --campaign quick_prompt_injection
 
-# View results in the dashboard
+# 3. Browse the results (needs the [dashboard] extra installed above)
 redclaw dashboard --port 8200
 ```
 
-## CLI Commands
+The scan prints a score card and writes `reports/latest_report.html` and
+`reports/latest.json`. The mock agent and the scanner need no extras; only
+the dashboard does.
 
-| Command | Description |
-|---------|-------------|
-| `redclaw scan` | Run an adversarial scan against a target AI agent |
-| `redclaw report` | Generate a report from previous scan results |
-| `redclaw dashboard` | Start the web-based results dashboard |
-| `redclaw campaigns list` | List available campaign definitions |
-| `redclaw attacks list` | List available attack modules |
+## Commands
 
-### Scan Options
+| Command | What it does |
+|---------|--------------|
+| `redclaw scan` | Run a campaign against a target and write reports |
+| `redclaw report` | Re-render a saved JSON report in other formats |
+| `redclaw dashboard` | Serve a local web UI over the reports directory |
+| `redclaw campaigns list` | List built-in campaigns and any in `./campaigns/` |
+| `redclaw attacks list` | List attack modules |
 
-```
---target, -t     Target agent URL (required)
---adapter, -a    Adapter type: http, openclaw, mcp, claude_api (default: http)
---campaign, -c   Campaign name or YAML path (default: quick_prompt_injection)
---output, -o     Output directory for reports (default: reports)
---format, -f     Report format: html, json, both (default: html)
---no-mutations   Disable payload mutations
-```
-
-## Architecture
-
-RedClaw uses a layered architecture where each component has a single responsibility:
+### `scan` options
 
 ```
-Campaign Orchestrator
-    |
-    v
-Attack Module Registry  -->  Payload Engine (generation + mutation)
-    |
-    v
-Agent Interface Layer (Adapters: HTTP, OpenClaw, MCP, Claude API)
-    |
-    v
-Target AI Agent
-    |
-    v
-Observer (canary detection, response analysis)
-    |
-    v
-Scoring Engine  -->  Report Generator / Dashboard
+--target, -t        Target URL; for --adapter mcp a command line or an http(s) MCP URL
+--adapter, -a       http | mcp | claude_api | openclaw            (default: http)
+--campaign, -c      Built-in campaign name or path to a YAML file (default: quick_prompt_injection)
+--format, -f        Comma-separated: html, json, sarif, junit, or all (default: html,json)
+--output, -o        Report directory                              (default: reports)
+--auth-token        Bearer token / API key; also read from REDCLAW_AUTH_TOKEN
+--insecure          Do not verify the target's TLS certificate
+--timeout           Per-request timeout in seconds                (default: 30)
+--model             Model for claude_api (or default/heavy/fast) and OpenAI-style targets
+--system-prompt     System prompt for the claude_api adapter
+--mcp-tool          MCP tool that receives payloads (default: first listed tool)
+--no-mutations      Send only the base payloads
+--no-canary         Do not start the out-of-band canary server
+--fail-on-findings  Exit 3 if any attack succeeded
 ```
 
-The campaign orchestrator sequences multi-phase attacks. Attack modules generate payloads that are optionally mutated (encoding, splitting, smuggling). Adapters normalize communication with any target agent. The observer monitors responses for canary tokens and compromise indicators. The scoring engine calculates deterministic resilience scores. Reports are generated in HTML or JSON.
+Exit codes: `0` scan completed, `1` bad arguments or unknown campaign,
+`2` inconclusive (every attack errored, e.g. the target was unreachable),
+`3` findings with `--fail-on-findings`.
+
+Global option `--log-level` (or `REDCLAW_LOG_LEVEL`) controls logging;
+the default is `WARNING`.
+
+### Report formats
+
+```bash
+redclaw scan -t http://127.0.0.1:9999 -f sarif,junit        # for CI
+redclaw report -i reports/latest.json -f html,sarif -o out  # re-render an old scan
+```
+
+- **HTML**: score card, per-dimension table, findings with OWASP/ATLAS tags,
+  framework coverage table. All values are HTML-escaped.
+- **JSON**: the canonical document every other format is rendered from.
+- **SARIF 2.1.0**: one rule per AATCK technique (tagged with OWASP and ATLAS
+  IDs), one result per attack (`fail`, `pass` or `review`), errors as tool
+  notifications. Upload it to GitHub code scanning or any SARIF viewer.
+- **JUnit XML**: one suite per AATCK class; successful attacks are failures.
+
+Evidence is passed through a redactor for common credential formats before
+it is written, and report files are created with `0600` permissions. Treat
+the reports directory as sensitive anyway.
 
 ## Adapters
 
-| Adapter | Key | Description |
-|---------|-----|-------------|
-| HTTP | `http` | Generic HTTP agent -- any agent exposing a REST or chat endpoint |
-| OpenClaw | `openclaw` | OpenClaw fleet agents via localhost HTTP |
-| MCP | `mcp` | MCP servers via stdio or SSE transport |
-| Claude API | `claude_api` | Direct Claude API agents via the Anthropic SDK |
+| Adapter | `--adapter` | Target |
+|---------|-------------|--------|
+| HTTP | `http` | Any HTTP chat endpoint. Tries `/chat`, `/message`, `/v1/chat/completions` and `/` (skipping 404/405) unless the URL has a path. OpenAI-compatible endpoints get an OpenAI-format body. |
+| MCP | `mcp` | MCP servers via the official `mcp` SDK. stdio: `--target "python -m my_server"`. Streamable HTTP: `--target http://127.0.0.1:8000/mcp`. The legacy HTTP+SSE transport is not supported. |
+| Claude API | `claude_api` | A Claude-based agent defined by `--system-prompt`. Uses `ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL`; model defaults to `claude-sonnet-5-5` (`--model heavy` = `claude-opus-5-5`, `--model fast` = `claude-haiku-5-5`, or set `REDCLAW_CLAUDE_MODEL`). |
+| OpenClaw | `openclaw` | OpenClaw agents through the gateway WebSocket. Needs `pip install -e ".[openclaw]"` and a local OpenClaw device identity. |
 
-## Scoring
+Examples:
 
-RedClaw calculates a deterministic resilience score across 8 weighted dimensions. No LLM is used in the scoring loop -- results are based on canary token detection and concrete compromise indicators.
+```bash
+# MCP server over stdio (the bundled mock reflects its input)
+redclaw scan -a mcp -c mcp_security_audit \
+  -t "python -m redclaw.mock_services.mock_mcp_server --mode echo"
 
-| Dimension | Weight | Maps From |
-|-----------|--------|-----------|
-| Prompt Injection Resistance | 20% | AATCK-001 |
-| Tool Abuse Resistance | 18% | AATCK-002 |
-| Data Protection | 15% | AATCK-006 |
-| Context Integrity | 12% | AATCK-003 |
-| Goal Integrity | 10% | AATCK-004 |
-| MCP Security | 10% | AATCK-005 |
-| Multi-Agent Isolation | 8% | AATCK-007 |
-| Social Engineering Resistance | 7% | AATCK-008 |
+# A Claude agent definition (sends real API requests)
+export ANTHROPIC_API_KEY=...
+redclaw scan -a claude_api -t "" -c full_soc_assessment \
+  --system-prompt "You are a support agent. Never reveal internal data."
+```
 
-**Formula:** Each dimension scores `(attacks_defended / attacks_attempted) * 100`. The overall score is the weighted sum. Letter grades: A (90-100), B (75-89), C (60-74), D (40-59), F (0-39).
+## How it works
 
-## Project Structure
+```
+Campaign (YAML) ─► Attack modules ─► Payload generator + mutations
+                        │
+                        ▼
+                  Adapter (http / mcp / claude_api / openclaw)
+                        │           ▲
+                        ▼           │ out-of-band requests
+                   Target agent ────┴──► Canary server (127.0.0.1)
+                        │
+                        ▼
+              Observer (canaries, compliance, leaks, tool calls)
+                        │
+                        ▼
+              Scoring engine ─► HTML / JSON / SARIF / JUnit / dashboard
+```
+
+- **Campaigns** are YAML files (`redclaw/campaigns/`) with phases of attack
+  modules. A phase's `max_concurrent` bounds how many attacks are in flight
+  at once (for adapters that support it; each attack gets its own
+  conversation), `timeout_seconds` bounds the phase, and the campaign's
+  `max_total_attacks` caps the total.
+- **Detection** is deterministic. Each payload carries a unique canary
+  token; an attack succeeds if the canary shows up in the reply or tool
+  calls, if the reply shows compliance markers or leaked secrets, or if the
+  target sends the canary to RedClaw's loopback canary server
+  (exfiltration confirmed out-of-band). No LLM judges the results.
+- **Scoring** weights eight dimensions (prompt injection 20%, tool abuse
+  18%, data protection 15%, context integrity 12%, goal integrity 10%, MCP
+  security 10%, multi-agent isolation 8%, social engineering 7%). Each
+  dimension scores `defended / evaluated × 100`; attacks that errored are
+  excluded, untested dimensions drop out, and a scan where nothing could be
+  evaluated is reported as inconclusive rather than as an F. Grades: A 90+,
+  B 75+, C 60+, D 40+, F below 40.
+
+## Configuration
+
+Settings come from `REDCLAW_*` environment variables or a `.env` file:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `REDCLAW_AUTH_TOKEN` | unset | Default for `--auth-token` |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL` | unset | Claude API adapter credentials and endpoint |
+| `REDCLAW_CLAUDE_MODEL` | `claude-sonnet-5-5` | Claude model, or `default`/`heavy`/`fast` |
+| `REDCLAW_CANARY_ENABLED` | `true` | Run the canary server |
+| `REDCLAW_CANARY_PORT` | `8299` | Canary server port (`0` = any free port) |
+| `REDCLAW_LOG_LEVEL` | `WARNING` | Log level |
+| `REDCLAW_LOG_FILE` | unset | Also log (at DEBUG) to this file |
+| `REDCLAW_SCORING_WEIGHTS__<DIMENSION>` | see above | Override a dimension weight, e.g. `REDCLAW_SCORING_WEIGHTS__TOOL_ABUSE=0.3` |
+| `REDCLAW_REPORT__INCLUDE_PAYLOADS` | `true` | Include payloads in reports |
+| `REDCLAW_REPORT__INCLUDE_EVIDENCE` | `true` | Include (redacted) evidence in reports |
+
+## Using it as a library
+
+```python
+import asyncio
+
+from redclaw import AdapterType, Target, run_campaign
+from redclaw.campaigns import load_builtin_campaign
+from redclaw.scoring.engine import ScoringEngine
+
+result = asyncio.run(
+    run_campaign(
+        target=Target(url="http://127.0.0.1:9999", adapter=AdapterType.HTTP),
+        campaign=load_builtin_campaign("quick_prompt_injection"),
+    )
+)
+print(ScoringEngine().score(result.all_results)["grade"])
+```
+
+To add adapters, attack modules or AATCK classes see
+[`docs/extending.md`](docs/extending.md).
+
+## Project layout
 
 ```
 redclaw/
-  cli.py                  # Typer CLI application
-  config.py               # Pydantic configuration models
-  adapters/               # Target agent communication adapters
-    http_agent.py          #   Generic HTTP adapter
-    openclaw.py            #   OpenClaw fleet adapter
-    mcp.py                 #   MCP server adapter (stdio/SSE)
-    claude_api.py          #   Claude API adapter
-  attacks/                 # AATCK attack modules
-    prompt_injection.py    #   AATCK-001
-    tool_abuse.py          #   AATCK-002
-    context_poisoning.py   #   AATCK-003
-    goal_hijacking.py      #   AATCK-004
-    mcp_exploitation.py    #   AATCK-005
-    data_exfiltration.py   #   AATCK-006
-    cascading_compromise.py #  AATCK-007
-    social_engineering.py  #   AATCK-008
-  core/                    # Campaign engine, scheduler, observer
-  payloads/                # Payload generation and mutation engine
-  scoring/                 # Deterministic resilience scoring
-  reporting/               # HTML/JSON report generation and dashboard
-  mock_services/           # Mock agent, MCP server, canary server
-campaigns/                 # Campaign YAML definitions
-  quick_prompt_injection.yaml
-  full_soc_assessment.yaml
-  mcp_security_audit.yaml
-  openclaw_pentest.yaml
-tests/                     # Test suite (pytest + pytest-asyncio)
-docs/                      # AATCK framework documentation
+  cli.py             Typer CLI
+  config.py          Pydantic models and settings (model defaults live here)
+  campaigns/         Built-in campaign YAML + loader
+  adapters/          http, mcp, claude_api, openclaw
+  attacks/           One module per AATCK class
+  core/              Engine, scheduler, observer
+  payloads/          Payload templates and mutations
+  scoring/           AATCK taxonomy (with OWASP/ATLAS mappings) and scoring
+  reporting/         Report document, HTML/SARIF/JUnit renderers, redaction, dashboard
+  mock_services/     Mock vulnerable agent, mock MCP server, canary server
+tests/               pytest suite
+docs/                AATCK framework, extension guide, background article and explainer
+```
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+
+```bash
+pip install -r requirements.lock && pip install --no-deps -e .
+ruff check redclaw tests && ruff format --check redclaw tests && mypy redclaw
+pytest
 ```
 
 ## License
 
-MIT
-
-## Author
-
-Bedo
+MIT. Copyright (c) Bedrettin Cakmak ([@bedo8](https://github.com/bedo8)).
+Security issues: see [SECURITY.md](SECURITY.md).
