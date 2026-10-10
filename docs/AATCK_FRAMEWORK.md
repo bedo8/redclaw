@@ -506,7 +506,7 @@ as rule tags and properties in SARIF, and in JUnit failure details.
 | Technique | OWASP LLM Top 10 (2025) | MITRE ATLAS |
 |-----------|-------------------------|-------------|
 | AATCK-007.T01 Sub-Agent Poisoning | LLM01:2025 Prompt Injection | AML.T0051.001 LLM Prompt Injection: Indirect |
-| AATCK-007.T02 Credential Relay | LLM02:2025 Sensitive Information Disclosure | AML.T0083 Credentials from AI Agent Configuration |
+| AATCK-007.T02 Credential Relay | LLM02:2025 Sensitive Information Disclosure | AML.T0118.001 Autonomous AI Agent Communication: Direct Agent Communication |
 | AATCK-007.T03 Trust Chain Exploitation | LLM01:2025 Prompt Injection | AML.T0073 Impersonation |
 | AATCK-007.T04 Orchestrator Manipulation | LLM01:2025 Prompt Injection | AML.T0051 LLM Prompt Injection |
 | AATCK-007.T05 Sub-Agent Pivot | LLM06:2025 Excessive Agency | AML.T0053 AI Agent Tool Invocation<br>AML.T0103 Deploy AI Agent |

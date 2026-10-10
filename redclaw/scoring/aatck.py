@@ -65,6 +65,7 @@ MITRE_ATLAS_TECHNIQUES: dict[str, str] = {
     "AML.T0086": "Exfiltration via AI Agent Tool Invocation",
     "AML.T0098": "AI Agent Tool Credential Harvesting",
     "AML.T0103": "Deploy AI Agent",
+    "AML.T0118.001": "Autonomous AI Agent Communication: Direct Agent Communication",
     "AML.T0110.000": "AI Agent Tool Poisoning: Definition and Instructions",
     "AML.T0110.002": "AI Agent Tool Poisoning: Runtime Response",
 }
@@ -511,7 +512,7 @@ AATCK_007 = AATCKClass(
             "Credential Relay",
             "Use compromised agent's credentials for lateral movement.",
             owasp_llm=("LLM02:2025",),
-            atlas=("AML.T0083",),
+            atlas=("AML.T0118.001",),
         ),
         Technique(
             "AATCK-007.T03",
