@@ -1,6 +1,6 @@
 # AATCK: A MITRE ATT&CK-Style Framework for AI Agent Security
 
-*By Bedo*
+*By Bedrettin Cakmak*
 
 ---
 
