@@ -17,6 +17,51 @@ and the project aims to use [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI: least-privilege `permissions:`, actions pinned to commit SHAs,
   `contents: write` only in the release job, pip-audit on a hashed lock.
 
+### Added
+- SARIF 2.1.0 and JUnit XML output (`--format sarif,junit` or `all`).
+- OWASP Top 10 for LLM Applications 2025 and MITRE ATLAS mappings for every
+  AATCK technique, shown in all report formats and in
+  `docs/AATCK_FRAMEWORK.md`.
+- Concurrent attack execution bounded by each phase's `max_concurrent`;
+  `max_total_attacks` and phase timeouts are enforced.
+- Out-of-band exfiltration detection: the loopback canary server runs
+  during scans and confirms attacks whose canary reaches it.
+- CLI: `--auth-token` (env `REDCLAW_AUTH_TOKEN`), `--insecure`, `--timeout`,
+  `--model`, `--system-prompt`, `--mcp-tool`, `--no-canary`,
+  `--fail-on-findings`, `--log-level`, `--version`.
+- End-to-end CI job scanning the bundled mock agent and mock MCP server.
+- Stdlib-only mock agent (no extras needed) and a mock MCP server CLI.
+- Top-level public API: `redclaw.run_campaign`, `Target`, `Campaign`,
+  `AdapterType`, `register_adapter`, `get_adapter`, `list_adapters`.
+- `@register_adapter(identifier)` decorator — third-party adapters can now
+  register themselves without touching `CampaignEngine`.
+- `docs/extending.md` — how to add adapters, attack modules, and AATCK classes.
+- `docs/README.md` — index of the framework reference, extension guide,
+  background article and explainer.
+- Test coverage for the reporting layer, the Typer CLI, and HTTP adapter
+  response parsing (via `httpx.MockTransport`).
+- CI: `.github/workflows/test.yml` (matrix: ubuntu + macos × py 3.11/3.12/3.13)
+  and `.github/workflows/build.yml`. On a `v*` tag the latter builds the sdist
+  and wheel, publishes to PyPI via trusted publishing (OIDC, no stored token)
+  with PEP 740 Sigstore attestations, and attaches the artifacts to the
+  matching GitHub Release.
+- Pre-commit hooks (ruff, ruff-format, mypy, detect-secrets).
+- Coverage regression gate via `pytest --cov-fail-under`.
+
+### Changed
+- Dependencies use bounded ranges with a hash-pinned `requirements.lock`;
+  `mcp` is a core dependency; `jinja2>=3.1.6`, `anthropic>=1,<2`.
+- Attack modules share one execution path in `AttackModule`.
+- Unused settings (`db_path`, `mutation_model`, report format/output dir,
+  `declared_intent`) were removed.
+- Background article and explainer moved to `docs/`.
+- Adapter instantiation moved from an `if/elif` chain in
+  `CampaignEngine._create_adapter` to a registry lookup.
+- Package version is now sourced from git tags via setuptools-scm
+  (`pyproject.toml` declares `dynamic = ["version"]`); an sdist built without
+  a git checkout keeps the version embedded by setuptools-scm.
+- Minimum safe dependency bumps to clear reported CVEs (direct deps only).
+
 ### Fixed
 - Errored attacks no longer count as failed defenses: an unreachable target
   is reported as inconclusive (exit code 2), not as F 0/100.
@@ -34,52 +79,10 @@ and the project aims to use [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `redclaw report --format` is honoured.
 - Version comes from package metadata instead of a hardcoded `0.1.0`;
   default log level is `WARNING`.
-
-### Added
-- SARIF 2.1.0 and JUnit XML output (`--format sarif,junit` or `all`).
-- OWASP Top 10 for LLM Applications 2025 and MITRE ATLAS mappings for every
-  AATCK technique, shown in all report formats and in
-  `docs/AATCK_FRAMEWORK.md`.
-- Concurrent attack execution bounded by each phase's `max_concurrent`;
-  `max_total_attacks` and phase timeouts are enforced.
-- Out-of-band exfiltration detection: the loopback canary server runs
-  during scans and confirms attacks whose canary reaches it.
-- CLI: `--auth-token` (env `REDCLAW_AUTH_TOKEN`), `--insecure`, `--timeout`,
-  `--model`, `--system-prompt`, `--mcp-tool`, `--no-canary`,
-  `--fail-on-findings`, `--log-level`, `--version`.
-- End-to-end CI job scanning the bundled mock agent and mock MCP server.
-- Stdlib-only mock agent (no extras needed) and a mock MCP server CLI.
-
-### Changed
-- Dependencies use bounded ranges with a hash-pinned `requirements.lock`;
-  `mcp` is a core dependency; `jinja2>=3.1.6`, `anthropic>=1,<2`.
-- Attack modules share one execution path in `AttackModule`.
-- Unused settings (`db_path`, `mutation_model`, report format/output dir,
-  `declared_intent`) were removed.
-- Background article and explainer moved to `docs/`.
-
-### Added
-- Top-level public API: `redclaw.run_campaign`, `Target`, `Campaign`,
-  `AdapterType`, `register_adapter`, `get_adapter`, `list_adapters`.
-- `@register_adapter(identifier)` decorator — third-party adapters can now
-  register themselves without touching `CampaignEngine`.
-- `docs/extending.md` — how to add adapters, attack modules, and AATCK classes.
-- Test coverage for the reporting layer, the Typer CLI, and HTTP adapter
-  response parsing (via `httpx.MockTransport`).
-- CI: `.github/workflows/test.yml` (matrix: ubuntu + macos × py 3.11/3.12/3.13)
-  and `.github/workflows/build.yml` (tag-triggered sdist + wheel, attached to
-  the matching GitHub Release; no PyPI upload).
-- Pre-commit hooks (ruff, ruff-format, mypy, detect-secrets).
-- Coverage regression gate via `pytest --cov-fail-under`.
-
-### Changed
-- Adapter instantiation moved from an `if/elif` chain in
-  `CampaignEngine._create_adapter` to a registry lookup.
-- Package version is now sourced from git tags via setuptools-scm
-  (`pyproject.toml` declares `dynamic = ["version"]`).
-- Minimum safe dependency bumps to clear reported CVEs (direct deps only).
-
-### Fixed
+- AATCK-007.T02 (Credential Relay) now maps to MITRE ATLAS
+  `AML.T0118.001` (Direct Agent Communication, which covers agents exchanging
+  credentials) instead of `AML.T0083`, which only covers credentials read
+  from agent configuration files.
 - Clean mypy baseline (`strict_optional`, `warn_unused_ignores`,
   `warn_redundant_casts` — 0 errors).
 - Ruff auto-fixes and format applied across the codebase.
