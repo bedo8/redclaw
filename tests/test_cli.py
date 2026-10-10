@@ -168,3 +168,26 @@ def test_report_errors(tmp_path: Path) -> None:
     bad.write_text('{"x": 1}')
     assert runner.invoke(app, ["report", "-i", str(bad)]).exit_code == 1
     assert runner.invoke(app, ["report", "-i", str(bad), "-f", "pdf"]).exit_code == 1
+
+
+def test_dashboard_without_extra_explains(monkeypatch) -> None:
+    import importlib.util
+
+    real = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util, "find_spec", lambda name, *a: None if name == "fastapi" else real(name, *a)
+    )
+    result = runner.invoke(app, ["dashboard"])
+    assert result.exit_code == 1
+    assert "redclaw[dashboard]" in result.stdout
+
+
+def test_dashboard_starts_uvicorn(monkeypatch, tmp_path: Path) -> None:
+    calls: dict[str, Any] = {}
+    monkeypatch.setattr(
+        "redclaw.reporting.dashboard.run_dashboard",
+        lambda **kw: calls.update(kw),
+    )
+    result = runner.invoke(app, ["dashboard", "-p", "8765", "-r", str(tmp_path)])
+    assert result.exit_code == 0, result.stdout
+    assert calls == {"port": 8765, "reports_dir": str(tmp_path)}

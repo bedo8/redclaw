@@ -338,21 +338,21 @@ def dashboard(
     reports_dir: str = typer.Option("reports", "--reports", "-r", help="Reports directory"),
 ) -> None:
     """Start the results dashboard (needs the 'dashboard' extra)."""
-    try:
-        import uvicorn  # noqa: F401
+    import importlib.util
 
-        from redclaw.reporting.dashboard import run_dashboard
-    except ImportError:
+    if not all(importlib.util.find_spec(m) for m in ("fastapi", "uvicorn")):
         console.print(
             "[red]Error:[/red] the dashboard needs extra packages: "
             "pip install 'redclaw\\[dashboard]'"
         )
-        raise typer.Exit(EXIT_USAGE) from None
+        raise typer.Exit(EXIT_USAGE)
+
+    from redclaw.reporting import dashboard as dashboard_module
 
     console.print("\n[bold]RedClaw[/bold] Dashboard")
     console.print(f"  URL: http://127.0.0.1:{port}")
     console.print(f"  Reports: {escape(reports_dir)}\n")
-    run_dashboard(port=port, reports_dir=reports_dir)
+    dashboard_module.run_dashboard(port=port, reports_dir=reports_dir)
 
 
 if __name__ == "__main__":

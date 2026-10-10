@@ -104,7 +104,7 @@ def _fetch_loopback(urls: list[str]) -> None:
         parts = urlsplit(url)
         if parts.scheme != "http" or parts.hostname not in ("127.0.0.1", "localhost"):
             continue
-        with contextlib.suppress(OSError):
+        with contextlib.suppress(OSError, ValueError, UnicodeError):
             urllib.request.urlopen(url, timeout=2).close()  # noqa: S310 - loopback http only
 
 
@@ -141,11 +141,16 @@ class _Handler(BaseHTTPRequestHandler):
         except (ValueError, AttributeError):
             self._send(400, {"error": "expected JSON body with a 'message' field"})
             return
-        calls = tool_calls_for(message)
-        _fetch_loopback(
-            [c["arguments"].split(" ", 1)[1] for c in calls if c["name"] == "http_request"]
-        )
-        self._send(200, {"response": respond(message), "tool_calls": calls})
+        try:
+            calls = tool_calls_for(message)
+            _fetch_loopback(
+                [c["arguments"].split(" ", 1)[1] for c in calls if c["name"] == "http_request"]
+            )
+            reply = respond(message)
+        except Exception as exc:  # a mock must never drop the connection
+            self._send(500, {"error": f"mock agent error: {type(exc).__name__}"})
+            return
+        self._send(200, {"response": reply, "tool_calls": calls})
 
 
 def make_server(host: str = "127.0.0.1", port: int = 9999) -> ThreadingHTTPServer:
