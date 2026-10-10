@@ -281,3 +281,10 @@ async def test_full_campaign_against_mock_agent(mock_agent_url: str) -> None:
     assert score["tested"] is True
     assert all(d["status"] == "tested" for d in score["dimensions"])
     assert score["total_errors"] == 0
+
+
+async def test_non_loopback_canary_host_is_refused_gracefully() -> None:
+    settings = RedClawSettings(canary_enabled=True, canary_host="198.51.100.10")
+    result = await CampaignEngine(_target(), _campaign(), settings).run()
+    assert "loopback" in result.metadata["canary_server"]
+    assert result.total_attacks == 8

@@ -123,10 +123,10 @@ class CampaignEngine:
             return None
         from redclaw.mock_services.canary_server import CanaryServer
 
-        server = CanaryServer(host=self._settings.canary_host, port=self._settings.canary_port)
         try:
+            server = CanaryServer(host=self._settings.canary_host, port=self._settings.canary_port)
             await stack.enter_async_context(server)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
             logger.warning(f"Canary server unavailable ({exc}); out-of-band detection disabled")
             result.metadata["canary_server"] = f"unavailable: {exc}"
             return None
