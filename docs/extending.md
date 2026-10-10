@@ -154,6 +154,7 @@ Register the module in
 
 ```python
 from redclaw.attacks.my_attack import MyAttackModule
+
 register_module("my_attack", MyAttackModule)
 ```
 
