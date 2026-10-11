@@ -67,7 +67,10 @@ jobs:
       - name: Publish to PyPI
         # Mints a short-lived OIDC token (no stored secret) and generates PEP 740
         # Sigstore attestations for each artifact (attestations default to true).
-        uses: pypa/gh-action-pypi-publish@2834a314042ef964da07689278dd1e9d773e8afd # v1.14.2
+        # Not SHA-pinned on purpose: this action pulls a prebuilt image tagged
+        # by the ref it is invoked with, and pypa publishes images only for
+        # release tags (a SHA pin fails with "manifest unknown").
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           attestations: true
 
