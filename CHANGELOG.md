@@ -7,6 +7,19 @@ and the project aims to use [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-10-11
+
+### Added
+- `redclaw scan --seed N` makes mutations and canary tokens reproducible, so
+  two scans of the same agent give identical results (useful for CI gates).
+
+### Fixed
+- The bundled mock agent's behaviour depended on the random canary value, so
+  its demo score changed on every run despite claiming to be deterministic.
+  It now decides on the payload text with canaries masked out.
+
+## [1.0.0] — 2026-10-11
+
 ### Security
 - HTML reports are rendered with Jinja2 autoescaping; the dashboard escapes
   every interpolated value (including `'`), uses no inline handlers, sends a
@@ -101,6 +114,8 @@ and the project aims to use [Semantic Versioning](https://semver.org/spec/v2.0.0
   prompt injection + tool abuse modules, HTML + JSON reporting.
 - MIT license and project README.
 
-[Unreleased]: https://github.com/bedo8/redclaw/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/bedo8/redclaw/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/bedo8/redclaw/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/bedo8/redclaw/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/bedo8/redclaw/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bedo8/redclaw/releases/tag/v0.1.0

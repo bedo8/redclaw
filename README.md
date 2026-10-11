@@ -37,20 +37,21 @@ OWASP/ATLAS tables: [`docs/AATCK_FRAMEWORK.md`](docs/AATCK_FRAMEWORK.md).
 Requires Python 3.11+.
 
 ```bash
-git clone https://github.com/bedo8/redclaw.git
-cd redclaw
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dashboard]"
+pip install "redclaw[dashboard]"
 
 # 1. Start the deliberately vulnerable mock agent (loopback only)
 python -m redclaw.mock_services.mock_agent &
 
-# 2. Scan it
-redclaw scan --target http://127.0.0.1:9999 --campaign quick_prompt_injection
+# 2. Scan it with every attack class
+redclaw scan --target http://127.0.0.1:9999 --campaign full_soc_assessment
 
-# 3. Browse the results (needs the [dashboard] extra installed above)
+# 3. Browse the results
 redclaw dashboard --port 8200
 ```
+
+To work on RedClaw itself, clone the repo and install it in editable mode
+instead: `git clone https://github.com/bedo8/redclaw && cd redclaw && pip install -e ".[dashboard]"`.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The scan prints a score card and writes `reports/latest_report.html` and
 `reports/latest.json`. The mock agent and the scanner need no extras; only
@@ -83,7 +84,12 @@ the dashboard does.
 --no-mutations      Send only the base payloads
 --no-canary         Do not start the out-of-band canary server
 --fail-on-findings  Exit 3 if any attack succeeded
+--seed              Seed mutations and canaries so repeated scans are identical
 ```
+
+Payload mutations are random by default, so two scans of the same agent can
+differ by a few findings. Pass `--seed` (any integer) when you compare runs
+or gate CI on a score; use `--no-mutations` for the smallest fixed set.
 
 Exit codes: `0` scan completed, `1` bad arguments or unknown campaign,
 `2` inconclusive (every attack errored, e.g. the target was unreachable),
