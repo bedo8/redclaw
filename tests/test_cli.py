@@ -191,3 +191,18 @@ def test_dashboard_starts_uvicorn(monkeypatch, tmp_path: Path) -> None:
     result = runner.invoke(app, ["dashboard", "-p", "8765", "-r", str(tmp_path)])
     assert result.exit_code == 0, result.stdout
     assert calls == {"port": 8765, "reports_dir": str(tmp_path)}
+
+
+def test_scan_with_seed_is_reproducible(mock_agent_url: str, tmp_path: Path) -> None:
+    def score(run: str) -> dict:
+        out = tmp_path / run
+        result = _scan(
+            "-t", mock_agent_url, "-o", str(out), "-f", "json", "--seed", "7", "--no-canary"
+        )
+        assert result.exit_code == 0, result.stdout
+        return json.loads((out / "latest.json").read_text())["score"]
+
+    first, second = score("a"), score("b")
+    assert first["total_attacks"] > 0
+    assert first["total_succeeded"] == second["total_succeeded"]
+    assert first["overall_score"] == second["overall_score"]

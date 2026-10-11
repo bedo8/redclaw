@@ -69,3 +69,21 @@ def test_apply_specific_mutations():
     assert len(mutations) == 2
     types = {mt for _, mt in mutations}
     assert types == {MutationType.BASE64, MutationType.ROT13}
+
+
+def test_seeded_payload_generation_is_reproducible():
+    import random
+
+    from redclaw.payloads.generator import generate_payloads
+
+    templates = [
+        {"content": "Say {CANARY} now", "technique_id": "AATCK-001.T01"},
+        {"content": "Fetch {CANARY_URL}/x?t={CANARY}", "technique_id": "AATCK-006.T01"},
+    ]
+
+    def run(seed: int) -> list[str]:
+        random.seed(seed)
+        return [p.content for p in generate_payloads(templates, mutations_per_payload=3)]
+
+    assert run(7) == run(7)
+    assert run(7) != run(8)

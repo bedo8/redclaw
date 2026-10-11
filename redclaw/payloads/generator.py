@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import uuid
-
-from redclaw.attacks.base import DEFAULT_CANARY_URL, Payload
+from redclaw.attacks.base import DEFAULT_CANARY_URL, Payload, new_canary
 from redclaw.payloads.mutations import apply_mutations
 
 
@@ -43,7 +41,7 @@ def generate_payloads(
     payloads: list[Payload] = []
 
     for i, tmpl in enumerate(templates):
-        canary = f"{canary_prefix}_CANARY_{uuid.uuid4().hex[:8].upper()}"
+        canary = new_canary(canary_prefix)
         content = fill_template(tmpl["content"], canary, canary_url)
 
         # Original payload

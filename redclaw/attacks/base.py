@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -301,8 +302,17 @@ class AttackModule(ABC):
 
     def generate_canary(self, prefix: str = "REDCLAW") -> str:
         """Generate a unique canary token for this attack."""
-        uid = str(uuid.uuid4())[:8].upper()
-        return f"{prefix}_CANARY_{uid}"
+        return new_canary(prefix)
+
+
+def new_canary(prefix: str = "REDCLAW") -> str:
+    """A fresh canary token: ``<prefix>_CANARY_<8 hex>``.
+
+    Drawn from the ``random`` module rather than ``uuid4`` so ``redclaw scan
+    --seed`` reproduces the exact same payloads. Canaries only need to be
+    unique within a run, not secret.
+    """
+    return f"{prefix}_CANARY_{random.getrandbits(32):08X}"
 
 
 def build_multi_turn_payloads(
@@ -313,7 +323,7 @@ def build_multi_turn_payloads(
 
     result: list[Payload] = []
     for seq in sequences:
-        canary = f"{canary_prefix}_CANARY_{uuid.uuid4().hex[:8].upper()}"
+        canary = new_canary(canary_prefix)
         turns = [fill_template(t, canary, canary_url) for t in seq["turns"]]
         result.append(
             Payload(

@@ -106,6 +106,11 @@ def scan(
     fail_on_findings: bool = typer.Option(
         False, "--fail-on-findings", help=f"Exit {EXIT_FINDINGS} if any attack succeeded"
     ),
+    seed: int | None = typer.Option(
+        None,
+        "--seed",
+        help="Seed payload mutations so repeated scans send the same variants (useful in CI)",
+    ),
 ) -> None:
     """Run an adversarial scan against a target AI agent."""
     from pydantic import SecretStr
@@ -128,6 +133,10 @@ def scan(
         raise typer.Exit(EXIT_USAGE) from None
     if no_mutations:
         campaign_config.payload_mutations = False
+    if seed is not None:
+        import random
+
+        random.seed(seed)
 
     settings = RedClawSettings()
     if not canary:
